@@ -1092,19 +1092,14 @@ const $id = id => document.getElementById(id);
 
 // ── Claude API ────────────────────────────
 async function callClaude(messages, system) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1000,
-      system,
-      messages,
-    }),
+    body: JSON.stringify({ messages, system }),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error?.message || 'API error');
-  return data.content.map(b => b.text || '').join('');
+  if (!res.ok) throw new Error(data.error || 'API error');
+  return data.text;  // chat.js は { text } を返すのでここだけ
 }
 
 async function analyzePhoto(b64, mime) {
