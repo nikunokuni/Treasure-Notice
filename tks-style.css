@@ -1,0 +1,517 @@
+/* ═══════════════════════════════
+   たからさがし — CSS  v4
+   ═══════════════════════════════ */
+
+:root {
+  --paper:        #fdf6e3;
+  --paper2:       #fef9f0;
+  --deep:         #2d1b00;
+  --amber:        #e8860a;
+  --amber-light:  #ffd166;
+  --amber-pale:   #fff3cd;
+  --teal:         #0a9396;
+  --teal-light:   #94d2bd;
+  --coral:        #e76f51;
+  --coral-light:  #f4a261;
+  --mint:         #52b788;
+  --mint-light:   #b7e4c7;
+  --lavender:     #9b89c4;
+  --shadow:       rgba(45,27,0,0.10);
+  --tab-h:        48px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background:#1a0f00;
+  font-family:'Zen Maru Gothic',sans-serif;
+  min-height:100vh;
+  display:flex; align-items:center; justify-content:center;
+  padding:20px 16px;
+}
+
+/* ── 電話フレーム ── */
+.phone {
+  width:100%; max-width:390px;
+  background:var(--paper);
+  border-radius:32px; overflow:hidden;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.08),
+    0 32px 64px rgba(0,0,0,0.65),
+    inset 0 1px 0 rgba(255,255,255,0.6);
+  display:flex; flex-direction:column;
+  min-height:680px; max-height:860px;
+  background-image:repeating-linear-gradient(
+    transparent,transparent 27px,
+    rgba(232,134,10,0.07) 27px,rgba(232,134,10,0.07) 28px
+  );
+}
+
+/* ── ステータスバー ── */
+.sbar {
+  height:32px; display:flex; align-items:center;
+  justify-content:space-between; padding:0 18px;
+  flex-shrink:0; background:rgba(253,246,227,0.95);
+}
+.sbar-time  { font-size:11px; font-weight:700; color:var(--deep); }
+.sbar-icons { font-size:10px; color:rgba(45,27,0,0.4); }
+
+/* ══════════════════════════════
+   付箋タブバー
+   ══════════════════════════════ */
+.tabs {
+  display:flex; align-items:flex-end;
+  padding:0 6px; gap:3px;
+  flex-shrink:0;
+  height:var(--tab-h);
+}
+.tab {
+  display:flex; align-items:center; justify-content:center;
+  gap:3px; padding:0 7px; height:36px;
+  border-radius:10px 10px 0 0;
+  font-size:9px; font-weight:700;
+  cursor:pointer; transition:all .15s;
+  color:rgba(45,27,0,0.45);
+  background:rgba(45,27,0,0.07);
+  border:1.5px solid transparent; border-bottom:none;
+  letter-spacing:0.02em; flex:1;
+  position:relative; bottom:-1px;
+  white-space:nowrap;
+}
+.tab.active {
+  height:40px;
+  background:var(--paper);
+  color:var(--deep);
+  border-color:rgba(232,134,10,0.25);
+  box-shadow:0 -2px 6px rgba(232,134,10,0.1);
+  z-index:2;
+}
+.tab-home.active { border-top:3px solid var(--amber); }
+.tab-cal.active  { border-top:3px solid var(--teal); }
+.tab-box.active  { border-top:3px solid var(--coral); }
+.tab-fav.active  { border-top:3px solid var(--mint); }
+.tab-set.active  { border-top:3px solid var(--lavender); }
+.tab-icon { font-size:12px; }
+.tab-line {
+  height:2px; flex-shrink:0;
+  background:linear-gradient(90deg,
+    rgba(232,134,10,0.2),rgba(232,134,10,0.08),rgba(232,134,10,0.2));
+}
+
+/* ══════════════════════════════
+   会話中ヘッダー
+   ══════════════════════════════ */
+.chat-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:8px 16px; flex-shrink:0;
+  background:var(--paper);
+  border-bottom:1px solid rgba(232,134,10,0.15);
+}
+.chat-header-info { display:flex; align-items:center; gap:8px; }
+.chat-header-emoji { font-size:20px; }
+.chat-header-name  { font-size:13px; font-weight:700; color:var(--deep); }
+.chat-header-lens  {
+  font-size:10px; color:var(--coral);
+  background:rgba(231,111,81,0.1); padding:2px 8px; border-radius:12px;
+}
+.chat-close-btn {
+  width:30px; height:30px; border-radius:50%;
+  background:rgba(45,27,0,0.07); border:none;
+  font-size:14px; color:rgba(45,27,0,0.5);
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+}
+
+/* ── コンテンツ ── */
+.content { padding:16px 18px 32px; overflow-y:auto; flex:1; }
+
+/* ══════════════════════════════
+   ボタン
+   ══════════════════════════════ */
+.btn-primary {
+  display:block; width:100%; padding:13px;
+  background:var(--amber); color:white; border:none; border-radius:14px;
+  font-family:'Kaisei Decol',serif; font-size:15px; letter-spacing:0.12em;
+  cursor:pointer; box-shadow:0 4px 0 rgba(180,90,0,0.35);
+  transition:transform .1s,box-shadow .1s; margin-bottom:10px;
+}
+.btn-primary:active { transform:translateY(2px); box-shadow:0 2px 0 rgba(180,90,0,0.35); }
+.btn-secondary {
+  display:block; width:100%; padding:11px;
+  background:white; color:var(--deep);
+  border:2px solid rgba(45,27,0,0.12); border-radius:14px;
+  font-size:13px; cursor:pointer; margin-bottom:10px;
+}
+.btn-dark {
+  display:block; width:100%; padding:13px;
+  background:var(--deep); color:var(--amber-light); border:none; border-radius:14px;
+  font-family:'Kaisei Decol',serif; font-size:15px; letter-spacing:0.12em;
+  cursor:pointer; box-shadow:0 4px 0 rgba(0,0,0,0.28);
+  transition:transform .1s,box-shadow .1s;
+}
+.btn-dark:active   { transform:translateY(2px); box-shadow:0 2px 0 rgba(0,0,0,0.28); }
+.btn-dark:disabled { opacity:.4; cursor:not-allowed; transform:none; }
+
+/* ══════════════════════════════
+   フォーム
+   ══════════════════════════════ */
+.form-block {
+  background:white; border-radius:16px; padding:14px; margin-bottom:12px;
+  border:1.5px solid rgba(45,27,0,0.07);
+  box-shadow:0 1px 4px rgba(45,27,0,0.04);
+}
+.form-label { font-size:10px; letter-spacing:.15em; color:rgba(45,27,0,0.4); margin-bottom:8px; }
+.form-label em { color:var(--amber); font-style:normal; }
+.form-input {
+  width:100%; border:2px solid rgba(45,27,0,0.1); border-radius:10px;
+  padding:9px 12px; font-family:'Zen Maru Gothic',sans-serif; font-size:14px;
+  color:var(--deep); outline:none; background:var(--paper2);
+}
+.form-input:focus { border-color:var(--amber); background:white; }
+.form-input.error { border-color:var(--coral); }
+.form-error { font-size:10px; color:var(--coral); margin-top:4px; display:none; }
+.form-error.show { display:block; }
+
+/* ── タイプ選択 ── */
+.type-grid { display:flex; flex-direction:column; gap:8px; }
+.type-card {
+  border-radius:14px; border:2px solid rgba(45,27,0,0.08);
+  padding:12px 14px; cursor:pointer; transition:all .15s;
+  background:white; display:flex; align-items:center; gap:12px;
+}
+.type-card.sel-A { background:rgba(255,209,102,0.15); border-color:var(--amber); }
+.type-card.sel-B { background:rgba(10,147,150,0.08);  border-color:var(--teal); }
+.type-card.sel-C { background:rgba(155,137,196,0.12); border-color:var(--lavender); }
+.type-badge { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+.type-badge-A { background:var(--amber-pale); }
+.type-badge-B { background:rgba(10,147,150,0.1); }
+.type-badge-C { background:rgba(155,137,196,0.12); }
+.type-info { flex:1; }
+.type-name { font-size:13px; font-weight:700; color:var(--deep); margin-bottom:2px; }
+.type-desc { font-size:10px; color:rgba(45,27,0,0.45); line-height:1.4; }
+
+/* ── 呼び方チップ ── */
+.parent-chips { display:flex; gap:7px; flex-wrap:wrap; }
+.parent-chip {
+  padding:6px 12px; border-radius:20px;
+  border:2px solid rgba(45,27,0,0.1);
+  background:white; font-size:12px; color:rgba(45,27,0,0.5); cursor:pointer;
+}
+.parent-chip.sel { background:var(--teal-light); border-color:var(--teal); color:var(--teal); font-weight:700; }
+
+/* ── オンボーディング ── */
+.step-dots { display:flex; gap:6px; justify-content:center; margin-bottom:16px; }
+.step-dot  { width:6px; height:6px; border-radius:50%; background:rgba(45,27,0,0.15); transition:all .2s; }
+.step-dot.active { background:var(--amber); width:18px; border-radius:3px; }
+.step-dot.done   { background:var(--mint); }
+.onboard-wrap { display:flex; flex-direction:column; padding:24px 18px 28px; flex:1; overflow-y:auto; }
+.onboard-hero { text-align:center; margin-bottom:18px; }
+.onboard-emoji { font-size:52px; display:block; margin-bottom:8px; }
+.onboard-ttl   { font-family:'Kaisei Decol',serif; font-size:22px; color:var(--deep); margin-bottom:4px; }
+.onboard-ttl em { color:var(--amber); font-style:normal; }
+.onboard-sub   { font-size:12px; color:rgba(45,27,0,0.45); line-height:1.7; }
+
+/* ══════════════════════════════
+   ホーム
+   ══════════════════════════════ */
+.home-greeting { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+.home-greeting-emoji { font-size:32px; }
+.home-greeting-name  { font-family:'Kaisei Decol',serif; font-size:16px; color:var(--deep); }
+.home-greeting-sub   { font-size:11px; color:rgba(45,27,0,0.45); }
+.home-type-badge {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:4px 10px; border-radius:20px; font-size:10px; font-weight:700;
+  cursor:pointer; margin-bottom:14px;
+}
+.htb-A { background:var(--amber-pale); color:var(--amber); }
+.htb-B { background:rgba(10,147,150,0.1); color:var(--teal); }
+.htb-C { background:rgba(155,137,196,0.12); color:var(--lavender); }
+.section-ttl { font-size:9px; letter-spacing:.2em; color:rgba(45,27,0,0.35); margin-bottom:9px; }
+
+.odai-random {
+  background:linear-gradient(135deg,var(--amber),var(--coral-light));
+  border-radius:16px; padding:14px 16px; margin-bottom:12px;
+  display:flex; align-items:center; gap:12px;
+  box-shadow:0 4px 12px rgba(232,134,10,0.22); cursor:pointer; position:relative;
+}
+.odai-random-icon  { font-size:30px; flex-shrink:0; }
+.odai-random-label { font-size:9px; color:rgba(255,255,255,0.7); letter-spacing:.15em; margin-bottom:2px; }
+.odai-random-name  { font-family:'Kaisei Decol',serif; font-size:17px; color:white; }
+.odai-random-arrow { font-size:20px; color:rgba(255,255,255,0.55); margin-left:auto; }
+.reroll-btn {
+  position:absolute; top:8px; right:10px;
+  font-size:10px; color:rgba(255,255,255,0.75);
+  background:rgba(255,255,255,0.18); border:none; border-radius:20px;
+  padding:3px 8px; cursor:pointer; font-family:'Zen Maru Gothic',sans-serif;
+}
+.free-section { background:white; border-radius:14px; padding:12px 14px; margin-bottom:12px; border:1.5px solid rgba(45,27,0,0.07); }
+.free-label   { font-size:10px; letter-spacing:.1em; color:rgba(45,27,0,0.4); margin-bottom:7px; }
+.free-row     { display:flex; gap:8px; align-items:center; }
+.free-input {
+  flex:1; border:2px solid rgba(45,27,0,0.1); border-radius:22px;
+  padding:8px 13px; font-family:'Zen Maru Gothic',sans-serif; font-size:12px;
+  color:var(--deep); outline:none; background:var(--paper2);
+}
+.free-input:focus { border-color:var(--amber); background:white; }
+.free-go {
+  width:34px; height:34px; border-radius:50%; background:var(--amber); border:none;
+  font-size:15px; color:white; cursor:pointer; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+}
+.photo-row {
+  background:rgba(10,147,150,0.05);
+  border-radius:14px; padding:12px 14px;
+  border:1.5px dashed rgba(10,147,150,0.3); cursor:pointer; position:relative;
+  display:flex; align-items:center; gap:12px;
+}
+.photo-row input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.photo-row-ttl { font-size:13px; font-weight:700; color:var(--teal); margin-bottom:1px; }
+.photo-row-sub { font-size:10px; color:rgba(45,27,0,0.4); }
+.photo-row-icon { font-size:26px; }
+
+/* ══════════════════════════════
+   レンズ選択
+   ══════════════════════════════ */
+.odai-pill {
+  display:inline-flex; align-items:center; gap:8px;
+  background:var(--amber-pale); border-radius:22px; padding:7px 14px;
+  margin-bottom:12px; border:1.5px solid rgba(232,134,10,0.2);
+}
+.odai-pill-emoji { font-size:20px; }
+.odai-pill-name  { font-family:'Kaisei Decol',serif; font-size:15px; color:var(--deep); }
+.lens-hint { font-size:11px; color:rgba(45,27,0,0.45); margin-bottom:12px; line-height:1.6; }
+.lens-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px; }
+.lens-card {
+  border-radius:14px; border:2px solid transparent; cursor:pointer;
+  padding:12px 10px; display:flex; align-items:center; gap:8px; transition:all .15s;
+}
+.lens-card.selected { box-shadow:0 0 0 2px currentColor,0 0 0 4px rgba(255,255,255,0.8); transform:scale(1.02); }
+.lens-ことば  { background:rgba(231,111,81,0.1);  color:var(--coral);    border-color:rgba(231,111,81,0.2); }
+.lens-かず    { background:rgba(10,147,150,0.1);   color:var(--teal);     border-color:rgba(10,147,150,0.2); }
+.lens-かがく  { background:rgba(82,183,136,0.1);   color:var(--mint);     border-color:rgba(82,183,136,0.2); }
+.lens-しゃかい{ background:rgba(232,134,10,0.1);   color:var(--amber);    border-color:rgba(232,134,10,0.2); }
+.lens-えいご  { background:rgba(155,137,196,0.1);  color:var(--lavender); border-color:rgba(155,137,196,0.2); }
+.lens-じぶん  { background:rgba(255,209,102,0.18); color:#b8860b;         border-color:rgba(255,209,102,0.4); }
+.lens-icon { font-size:22px; }
+.lens-info { flex:1; }
+.lens-name { font-size:13px; font-weight:700; }
+.lens-desc { font-size:9px; opacity:.65; margin-top:2px; line-height:1.3; }
+
+/* ══════════════════════════════
+   チャット
+   ══════════════════════════════ */
+.chat-wrap { display:flex; flex-direction:column; flex:1; overflow:hidden; padding:12px 16px 14px; }
+.speaker-row { display:flex; gap:8px; margin-bottom:10px; flex-shrink:0; }
+.speaker-btn {
+  flex:1; padding:7px; border-radius:12px; border:2px solid rgba(45,27,0,0.1);
+  font-size:11px; font-weight:700; cursor:pointer; text-align:center; transition:all .15s;
+  background:white; color:rgba(45,27,0,0.4);
+}
+.speaker-btn.active-child  { background:rgba(10,147,150,0.1);  color:var(--teal); border-color:var(--teal); }
+.speaker-btn.active-parent { background:rgba(82,183,136,0.1);  color:var(--mint); border-color:var(--mint); }
+.chat-area { display:flex; flex-direction:column; gap:10px; overflow-y:auto; flex:1; margin-bottom:10px; }
+.bubble-ai  { display:flex; gap:8px; align-items:flex-end; }
+.ai-avatar  {
+  width:28px; height:28px; border-radius:50%;
+  background:linear-gradient(135deg,var(--amber),var(--coral-light));
+  display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0;
+}
+.bubble-ai-text {
+  background:white; border-radius:16px 16px 16px 4px;
+  padding:9px 12px; font-size:12px; line-height:1.75; color:var(--deep);
+  max-width:220px; box-shadow:0 2px 8px var(--shadow);
+}
+.bubble-child { display:flex; justify-content:flex-end; }
+.bubble-child-text {
+  background:var(--teal); border-radius:16px 16px 4px 16px;
+  padding:9px 12px; font-size:12px; line-height:1.75; color:white; max-width:220px;
+}
+.bubble-parent-wrap { display:flex; flex-direction:column; align-items:flex-end; }
+.bubble-parent-who  { font-size:9px; color:rgba(45,27,0,0.35); margin-bottom:2px; }
+.bubble-parent-text {
+  background:var(--mint); border-radius:16px 16px 4px 16px;
+  padding:9px 12px; font-size:12px; line-height:1.75; color:white; max-width:220px;
+}
+.typing-dots { display:flex; gap:4px; padding:2px 0; }
+.typing-dots span { width:6px; height:6px; background:var(--amber); border-radius:50%; animation:bounce 1s infinite; }
+.typing-dots span:nth-child(2) { animation-delay:.2s; }
+.typing-dots span:nth-child(3) { animation-delay:.4s; }
+@keyframes bounce { 0%,100%{transform:translateY(0);opacity:.4} 50%{transform:translateY(-4px);opacity:1} }
+.chat-input-row { display:flex; gap:7px; align-items:center; flex-shrink:0; margin-bottom:8px; }
+.chat-input {
+  flex:1; background:white; border:2px solid rgba(45,27,0,0.1); border-radius:22px;
+  padding:9px 13px; font-family:'Zen Maru Gothic',sans-serif; font-size:12px;
+  color:var(--deep); outline:none;
+}
+.chat-input:focus { border-color:var(--amber); }
+.mic-btn {
+  width:36px; height:36px; border-radius:50%;
+  background:rgba(45,27,0,0.06); border:none;
+  font-size:16px; cursor:pointer; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+}
+.chat-send {
+  width:36px; height:36px; background:var(--amber); border:none; border-radius:50%;
+  font-size:15px; color:white; cursor:pointer; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+}
+.chat-send:disabled { opacity:.4; cursor:not-allowed; }
+.finish-btn {
+  display:block; width:100%; padding:10px;
+  background:var(--deep); color:var(--amber-light); border:none;
+  border-radius:14px; font-family:'Kaisei Decol',serif; font-size:14px;
+  letter-spacing:.12em; cursor:pointer; box-shadow:0 3px 0 rgba(0,0,0,0.22); flex-shrink:0;
+}
+
+/* ══════════════════════════════
+   サマリー
+   ══════════════════════════════ */
+.summary-hero { text-align:center; padding:8px 0 14px; }
+.summary-hero-emoji { font-size:44px; display:block; margin-bottom:4px; }
+.summary-hero-ttl   { font-family:'Kaisei Decol',serif; font-size:17px; color:var(--deep); }
+.findings-card {
+  background:white; border-radius:16px; padding:14px; margin-bottom:12px;
+  border:1.5px solid rgba(45,27,0,0.07); position:relative;
+}
+.findings-label { font-size:9px; letter-spacing:.2em; color:rgba(45,27,0,0.35); margin-bottom:10px; }
+.finding-item   { display:flex; align-items:flex-start; gap:8px; margin-bottom:8px; }
+.finding-item:last-child { margin-bottom:0; }
+.finding-dot    { width:7px; height:7px; border-radius:50%; flex-shrink:0; margin-top:5px; }
+.finding-text   { font-size:12px; color:var(--deep); line-height:1.7; }
+.bookmark-btn {
+  position:absolute; top:10px; right:12px;
+  background:none; border:none; font-size:20px; cursor:pointer;
+  opacity:.4; transition:all .2s; line-height:1;
+}
+.bookmark-btn.active { opacity:1; transform:scale(1.2); }
+.ai-opinion-card {
+  background:linear-gradient(135deg,#fffbf0,#fff3cd);
+  border-radius:14px; padding:12px 14px; margin-bottom:12px;
+  border:1.5px solid rgba(232,134,10,0.2); position:relative; overflow:hidden;
+}
+.ai-opinion-card::before { content:'💡'; position:absolute; top:-6px; right:-2px; font-size:44px; opacity:.07; }
+.ai-opinion-toggle { display:flex; align-items:center; justify-content:space-between; cursor:pointer; }
+.ai-opinion-label   { font-size:10px; letter-spacing:.2em; color:var(--amber); font-weight:700; }
+.ai-opinion-chevron { font-size:13px; color:var(--amber); transition:transform .2s; }
+.ai-opinion-chevron.open { transform:rotate(180deg); }
+.ai-opinion-body { margin-top:10px; }
+.ai-opinion-para { font-size:12px; color:var(--deep); line-height:1.85; margin-bottom:7px; }
+.ai-opinion-para:last-child { margin-bottom:0; }
+.summary-actions { display:flex; gap:8px; }
+.btn-again     { flex:1; padding:10px; background:white; color:var(--deep); border:2px solid rgba(45,27,0,0.12); border-radius:14px; font-size:12px; cursor:pointer; }
+.btn-next-odai { flex:1.4; padding:10px; background:var(--amber); color:white; border:none; border-radius:14px; font-family:'Kaisei Decol',serif; font-size:13px; letter-spacing:.1em; cursor:pointer; box-shadow:0 3px 0 rgba(180,90,0,0.28); }
+
+/* ══════════════════════════════
+   カレンダー演出
+   ══════════════════════════════ */
+.cal-burst-wrap {
+  position:fixed; inset:0; pointer-events:none; z-index:9999;
+}
+.cal-burst-item {
+  position:absolute;
+  font-size:22px;
+  animation:burst-fly 1.2s ease-out forwards;
+  opacity:0;
+}
+@keyframes burst-fly {
+  0%   { transform:translate(-50%,-50%) scale(0);   opacity:1; }
+  60%  { transform:translate(-50%,-50%) scale(1.3); opacity:1; }
+  100% { transform:translate(var(--tx),var(--ty)) scale(0.5); opacity:0; }
+}
+
+/* ── カレンダー本体 ── */
+.cal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.cal-month  { font-family:'Kaisei Decol',serif; font-size:17px; color:var(--deep); }
+.cal-nav    { background:none; border:none; font-size:18px; color:rgba(45,27,0,0.35); cursor:pointer; padding:4px 8px; }
+.cal-grid   { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin-bottom:16px; }
+.cal-dow    { text-align:center; font-size:9px; color:rgba(45,27,0,0.4); padding:4px 0; letter-spacing:.05em; }
+.cal-dow.sun { color:var(--coral); }
+.cal-dow.sat { color:var(--teal); }
+.cal-day {
+  aspect-ratio:1; border-radius:8px; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; font-size:11px;
+  color:rgba(45,27,0,0.5); cursor:default;
+  background:rgba(255,255,255,0.5);
+}
+.cal-day.empty   { background:transparent; }
+.cal-day.today   { background:var(--amber-pale); color:var(--amber); font-weight:700; border:1.5px solid rgba(232,134,10,0.3); }
+.cal-day.stamped { background:white; cursor:pointer; }
+.cal-day.stamped:hover { background:var(--amber-pale); }
+.cal-stamp { font-size:14px; line-height:1; }
+.cal-streak {
+  background:linear-gradient(135deg,var(--amber-pale),#fff8e7);
+  border-radius:14px; padding:12px 14px; margin-bottom:14px;
+  border:1.5px solid rgba(232,134,10,0.18);
+  display:flex; align-items:center; gap:12px;
+}
+.cal-streak-num { font-family:'Kaisei Decol',serif; font-size:28px; color:var(--amber); }
+.cal-streak-lbl { font-size:11px; color:rgba(45,27,0,0.5); }
+
+/* カレンダー日付クリック→たからモーダル */
+.modal-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,0.4);
+  display:flex; align-items:center; justify-content:center; z-index:100;
+}
+.modal-box {
+  background:var(--paper); border-radius:20px; padding:20px;
+  width:320px; max-height:70vh; overflow-y:auto;
+  box-shadow:0 8px 32px rgba(0,0,0,0.3);
+}
+.modal-ttl { font-family:'Kaisei Decol',serif; font-size:16px; color:var(--deep); margin-bottom:12px; }
+.modal-close { float:right; background:none; border:none; font-size:20px; cursor:pointer; color:rgba(45,27,0,0.4); }
+
+/* ══════════════════════════════
+   たからばこ・おきにいり共通
+   ══════════════════════════════ */
+.stats-row { display:flex; gap:8px; margin-bottom:16px; }
+.stat-box  { flex:1; background:white; border-radius:14px; padding:10px 8px; text-align:center; border:1.5px solid rgba(45,27,0,0.06); }
+.stat-num  { font-family:'Kaisei Decol',serif; font-size:24px; color:var(--amber); }
+.stat-lbl  { font-size:9px; color:rgba(45,27,0,0.4); letter-spacing:.1em; }
+.takara-item {
+  background:white; border-radius:14px; padding:12px 14px; margin-bottom:8px;
+  border:1.5px solid rgba(45,27,0,0.06); position:relative;
+}
+.takara-item-header { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.takara-item-emoji  { font-size:22px; }
+.takara-item-name   { font-size:13px; font-weight:700; color:var(--deep); flex:1; }
+.takara-item-lens   {
+  font-size:9px; padding:2px 7px; border-radius:12px;
+  background:rgba(231,111,81,0.1); color:var(--coral); font-weight:700;
+}
+.takara-item-date   { font-size:9px; color:rgba(45,27,0,0.35); }
+.takara-findings    { display:flex; flex-direction:column; gap:4px; margin-bottom:8px; }
+.takara-finding     { display:flex; gap:6px; align-items:flex-start; font-size:11px; color:var(--deep); line-height:1.5; }
+.takara-fav-btn {
+  position:absolute; top:10px; right:12px;
+  background:none; border:none; font-size:18px; cursor:pointer;
+  opacity:.35; transition:all .2s;
+}
+.takara-fav-btn.active { opacity:1; transform:scale(1.15); }
+.empty-msg { text-align:center; padding:32px 0; color:rgba(45,27,0,0.35); font-size:13px; line-height:2; }
+
+/* バッジ */
+.badge-grid { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+.badge     { padding:5px 10px; border-radius:20px; font-size:11px; font-weight:700; }
+.badge-on  { background:var(--amber-pale); color:var(--amber); }
+.badge-off { background:rgba(45,27,0,0.05); color:rgba(45,27,0,0.25); }
+
+/* ══════════════════════════════
+   せってい
+   ══════════════════════════════ */
+.settings-section { background:white; border-radius:14px; padding:14px; margin-bottom:10px; border:1px solid rgba(45,27,0,0.06); }
+.settings-ttl { font-size:9px; letter-spacing:.2em; color:rgba(45,27,0,0.35); margin-bottom:12px; }
+.settings-field { margin-bottom:10px; }
+.settings-field:last-child { margin-bottom:0; }
+.settings-field-label { font-size:10px; color:rgba(45,27,0,0.45); margin-bottom:5px; }
+.toggle-row   { display:flex; align-items:center; justify-content:space-between; }
+.toggle-label { font-size:12px; color:var(--deep); }
+.toggle-sw    { width:40px; height:23px; border-radius:12px; background:rgba(45,27,0,0.15); position:relative; cursor:pointer; transition:background .2s; flex-shrink:0; }
+.toggle-sw.on { background:var(--amber); }
+.toggle-knob  { position:absolute; top:3px; left:3px; width:17px; height:17px; border-radius:50%; background:white; transition:transform .2s; box-shadow:0 1px 4px rgba(0,0,0,0.2); }
+.toggle-sw.on .toggle-knob { transform:translateX(17px); }
+
+/* ── ユーティリティ ── */
+.spinner {
+  display:inline-block; width:16px; height:16px;
+  border:2px solid rgba(45,27,0,0.12); border-top-color:var(--amber);
+  border-radius:50%; animation:spin .8s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
