@@ -57,7 +57,7 @@ function renderChatHeader() {
 function renderOnboard() {
   const s = S.step;
   const u = S.user;
-  const dots = [0,1,2].map(i =>
+  const dots = [0,1,2,3].map(i =>
     `<div class="step-dot ${i < s ? 'done' : i === s ? 'active' : ''}"></div>`
   ).join('');
 
@@ -70,10 +70,16 @@ function renderOnboard() {
         <div class="form-error" id="ob-name-err">なまえをいれてください</div>
       </div>
       <div class="form-block">
-        <div class="form-label"><em>こどもタイプ</em>をえらんでね</div>
-        <div class="type-grid">${renderTypeCards(u.type)}</div>
+        <div class="form-label"><em>ねんれい</em>をえらんでね</div>
+        <div class="age-grid">${renderAgeCards(u.ageGroup)}</div>
       </div>`;
   } else if (s === 1) {
+    body = `
+      <div class="form-block">
+        <div class="form-label"><em>まなびのタイプ</em>をえらんでね</div>
+        <div class="type-grid">${renderTypeCards(u.type)}</div>
+      </div>`;
+  } else if (s === 2) {
     body = `
       <div class="form-block">
         <div class="form-label">すきなもの <em>（じゆうに）</em></div>
@@ -105,11 +111,23 @@ function renderOnboard() {
       ${body}
       <div style="padding-top:18px">
         <button class="btn-primary" onclick="App.obNext()">
-          ${s < 2 ? 'つぎへ ›' : 'はじめる 🔍'}
+          ${s < 3 ? 'つぎへ ›' : 'はじめる 🔍'}
         </button>
         ${s > 0 ? `<button class="btn-secondary" onclick="App.obBack()">← もどる</button>` : ''}
       </div>
     </div>`;
+}
+
+function renderAgeCards(current) {
+  return AGE_GROUPS.map(a => `
+    <div class="type-card ${current === a.id ? 'sel-age' : ''}"
+         onclick="App.setAge('${a.id}')">
+      <div class="type-badge type-badge-age">${a.icon}</div>
+      <div class="type-info">
+        <div class="type-name">${a.label}</div>
+        <div class="type-desc">${a.desc}</div>
+      </div>
+    </div>`).join('');
 }
 
 function renderTypeCards(current) {
@@ -134,6 +152,7 @@ function renderParentChips(current) {
 function renderHome() {
   const u    = S.user;
   const type = TYPES.find(t => t.id === u.type) || TYPES[0];
+  const age  = AGE_GROUPS.find(a => a.id === (u.ageGroup||'young')) || AGE_GROUPS[0];
   const rec  = S.records.slice(-3).reverse();
   const r    = S.randOdai || pickRand();
   if (!S.randOdai) S.randOdai = r;
@@ -147,8 +166,13 @@ function renderHome() {
           <div style="font-size:11px;color:rgba(45,27,0,0.45)">きになること、なんでもOK</div>
         </div>
       </div>
-      <div class="home-type-badge htb-${type.id}" onclick="App.switchTab('set')">
-        ${type.icon} ${esc(type.name)} ›
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:14px">
+        <div class="home-type-badge htb-${type.id}" onclick="App.switchTab('set')" style="margin-bottom:0">
+          ${type.icon} ${esc(type.name)} ›
+        </div>
+        <div class="home-type-badge htb-age" onclick="App.switchTab('set')" style="margin-bottom:0">
+          ${age.icon} ${esc(age.label)} ›
+        </div>
       </div>
 
       ${S.odaiGenerating ? `
@@ -555,7 +579,11 @@ function renderSettings() {
           <div class="form-error" id="s-name-err">なまえをいれてください</div>
         </div>
         <div class="settings-field">
-          <div class="settings-field-label">こどもタイプ</div>
+          <div class="settings-field-label">ねんれい</div>
+          <div class="age-grid">${renderAgeCards(u.ageGroup)}</div>
+        </div>
+        <div class="settings-field">
+          <div class="settings-field-label">まなびのタイプ</div>
           <div class="type-grid">${renderTypeCards(u.type)}</div>
         </div>
         <div class="settings-field">
@@ -648,6 +676,86 @@ function renderSettings() {
       <button class="btn-primary" onclick="App.saveSettings()">ほぞんする ✓</button>
     </div>`;
 }
+      <div class="settings-section">
+        <div class="settings-ttl">いっしょにするひと</div>
+        <div class="settings-field">
+          <div class="settings-field-label">よびかた</div>
+          <div class="parent-chips">${renderParentChips(u.parentName)}</div>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-ttl">表示設定</div>
+        <div class="toggle-row">
+          <div class="toggle-label">💡 AIのかんがえ を表示する</div>
+          <div class="toggle-sw ${S.showOpinion?'on':''}" onclick="App.toggleShowOpinion()">
+            <div class="toggle-knob"></div>
+          </div>
+        </div>
+        <div class="settings-field">
+          <div class="settings-field-label">文字サイズ（全体）</div>
+          <div class="font-size-chips">
+            <div class="font-size-chip ${fs==='medium'?'sel':''}" onclick="App.setFontSize('medium')">中（ふつう）</div>
+            <div class="font-size-chip ${fs==='large'?'sel':''}" onclick="App.setFontSize('large')">大（おおきく）</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ウィークリーレポート -->
+      <div class="settings-section">
+        <div class="settings-ttl">ウィークリーレポート</div>
+        <div style="font-size:11px;color:rgba(45,27,0,0.45);margin-bottom:10px;line-height:1.6">
+          今週の学びをAIがまとめるよ（${u.parentName}向け）
+        </div>
+        ${S.weeklyReport ? `
+          <div class="report-card">
+            <div class="report-label">📊 ウィークリーレポート</div>
+            <div class="report-body">${aiText(S.weeklyReport)}</div>
+          </div>
+          <button class="btn-secondary" onclick="App.generateReport()">
+            ${S.reportLoading ? '<span class="spinner"></span>' : '🔄 もう一度生成'}
+          </button>` : `
+          <button class="btn-primary" onclick="App.generateReport()">
+            ${S.reportLoading ? '<span class="spinner"></span> せいせいちゅう…' : '📊 レポートをつくる'}
+          </button>`}
+      </div>
+
+      <!-- データ管理 -->
+      <div class="settings-section">
+        <div class="settings-ttl">データ管理</div>
+        <div style="font-size:var(--fs-xs);color:rgba(45,27,0,0.45);margin-bottom:10px;line-height:1.7">
+          きろくをCSVでかんりできるよ
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <button class="btn-secondary" style="flex:1;padding:9px;font-size:var(--fs-sm)"
+                  onclick="App.exportCSV()">📤 エクスポート</button>
+          <button class="btn-secondary" style="flex:1;padding:9px;font-size:var(--fs-sm)"
+                  onclick="App.triggerImport()">📥 インポート</button>
+        </div>
+        <input type="file" id="csv-import-input" accept=".csv"
+               style="display:none" onchange="App.importCSV(event)">
+        <div style="font-size:var(--fs-xs);color:rgba(45,27,0,0.35);line-height:1.6">
+          ※インポートすると既存データに追加されます
+        </div>
+      </div>
+
+      <!-- 意見・要望 -->
+      <div class="settings-section">
+        <div class="settings-ttl">意見・要望をおくる</div>
+        <div style="font-size:var(--fs-xs);color:rgba(45,27,0,0.45);margin-bottom:10px;line-height:1.7">
+          きづいたこと・ほしい機能・バグほうこくなど、なんでも！
+        </div>
+        <textarea id="feedback-text" rows="3"
+          style="width:100%;border:2px solid rgba(45,27,0,0.1);border-radius:10px;
+                 padding:9px 12px;font-family:'Zen Maru Gothic',sans-serif;
+                 font-size:var(--fs-sm);color:var(--deep);outline:none;
+                 background:var(--paper2);resize:none;margin-bottom:8px;line-height:1.7"
+          placeholder="ここにかいてね…"></textarea>
+        <button class="btn-primary" style="margin-bottom:0"
+                onclick="App.sendFeedback()">📨 おくる</button>
+      </div>
+
+      <button class="btn-primary" onclick="App.saveSettings()">ほぞんする ✓</button>
+    </div>`;
+}
 
 // fmtDate / pickRand は tks-logic.js で定義（ODAI_ALL への依存のため）
-
