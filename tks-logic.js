@@ -785,9 +785,8 @@ const App = {
     ]);
     const csvContent = [header, ...rows]
       .map(row => row.map(v => `"${String(v).replace(/"/g,'""')}"`).join(','))
-      .join('
-');
-    const bom  = '﻿'; // Excel用BOM
+      .join('\r\n');
+    const bom  = '\uFEFF'; // Excel用BOM (UTF-8 BOM for Excel)
     const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
@@ -808,9 +807,8 @@ const App = {
     const reader = new FileReader();
     reader.onload = e => {
       try {
-        const text  = e.target.result.replace(/^﻿/, ''); // BOM除去
-        const lines = text.split(/?
-/).filter(Boolean);
+        const text  = e.target.result.replace(/^\uFEFF/, ''); // BOM除去
+        const lines = text.split(/\r?\n/).filter(Boolean);
         if (lines.length < 2) throw new Error('データがないよ');
 
         let imported = 0;
@@ -919,4 +917,3 @@ if ('serviceWorker' in navigator) {
 persistLoad();
 applyFontSize();
 render();
-
