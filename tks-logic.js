@@ -289,7 +289,7 @@ function chatSystem() {
 - 見えない部分・中の構造・なぜそうなっているか、を推理させる
 - 「裏側はどうなってると思う？」「もしこれがなかったら？」と想像・仮説を引き出す
 - 「もしかして〜かもしれない」という推論を全力で受け止め、さらに深める
-- 答えが合っていなくても「いい考えだね！」と思考プロセスを褒める`,
+- 答えが合っていなくても「いい仮説だね！」と思考プロセスを褒める`,
   };
 
   // ── レンズレイヤー ──
@@ -851,8 +851,7 @@ const App = {
     ]);
     const csvContent = [header, ...rows]
       .map(row => row.map(v => `"${String(v).replace(/"/g,'""')}"`).join(','))
-      .join('
-');
+      .join('\n');
     const bom  = '﻿'; // Excel用BOM
     const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url  = URL.createObjectURL(blob);
@@ -875,9 +874,7 @@ const App = {
     reader.onload = e => {
       try {
         const text  = e.target.result.replace(/^﻿/, ''); // BOM除去
-        const lines = text.split(/
-?
-/).filter(Boolean);
+        const lines = text.split(/\r?\n/).filter(Boolean);
         if (lines.length < 2) throw new Error('データがないよ');
 
         let imported = 0;
