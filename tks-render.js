@@ -564,11 +564,13 @@ function renderTakaraCard(r, showFavBtn) {
       ${showFavBtn ? `
         <button class="takara-fav-btn ${r.bookmarked?'active':''}"
                 onclick="App.toggleRecordFav(${idx})">🔖</button>` : ''}
-      <div class="takara-item-header">
-        <span class="takara-item-emoji">${r.odai.emoji}</span>
-        <span class="takara-item-name">${esc(r.odai.name)}</span>
-        ${lens ? `<span class="takara-item-lens">${lens.icon} ${esc(lens.name)}</span>` : ''}
-      </div>
+     <div class="takara-item-header">
+  <span class="takara-item-emoji">${e}</span>
+  <span class="takara-item-name">${name}</span>
+  <div class="takara-item-meta">
+    <span class="takara-item-lens">${lensEmoji} ${lens}</span>
+  </div>
+</div>
       <div class="takara-findings">
         ${(r.findings||[]).map((f,i)=>`
           <div class="takara-finding">
