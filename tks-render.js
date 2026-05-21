@@ -267,6 +267,8 @@ function renderChat() {
   const u = S.user;
   const userMsgCount = S.messages.filter(m => m.role !== 'ai').length;
   return `
+  const progress = Math.min(S.messages.length / 6, 1); // 6回で満タン
+const hintText = LENS_HINTS[S.lens];
     <div class="chat-wrap">
       <div class="speaker-row">
         <div class="speaker-btn ${S.speaker === 'child'  ? 'active-child'  : ''}"
