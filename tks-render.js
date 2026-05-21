@@ -158,6 +158,19 @@ function renderHome() {
   if (!S.randOdai) S.randOdai = r;
 
   return `
+  <div class="hero-streak">
+  <div style="display:flex;align-items:center;justify-content:space-between;">
+    <div>
+      <div style="font-size:9px;color:rgba(255,255,255,0.7);letter-spacing:.18em;">🔥 れんぞくきろく</div>
+      <div style="display:flex;align-items:baseline;gap:4px;margin-top:3px;">
+        <span class="hero-streak-num">${S.streak}</span>
+        <span class="hero-streak-unit">にち</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:4px;">${weekDots}</div>
+  </div>
+  <div class="hero-streak-msg">🎉 ${streakMessage}</div>
+</div>
     <div class="content">
       <div class="home-greeting">
         <span class="home-greeting-emoji">🔍</span>
@@ -354,6 +367,9 @@ function renderSummary() {
               ${paras.map(p => `<div class="ai-opinion-para">${esc(p)}</div>`).join('')}
             </div>` : ''}
         </div>` : ''}
+        <button class="summary-save-btn" onclick="saveSummaryImage()">
+  <span>📸</span><span>がぞうとしてほぞん</span>
+</button>
 
       <div class="summary-actions">
         <button class="btn-again"     onclick="App.doAgain()">🔄 別のレンズで</button>
