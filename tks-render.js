@@ -49,7 +49,7 @@ function renderChatHeader() {
         <span class="chat-header-name">${esc(S.odai?.name || '')}</span>
         ${lens ? `<span class="chat-header-lens">${lens.icon} ${esc(lens.name)}</span>` : ''}
       </div>
-      <button class="chat-close-btn" onclick="App.closeChatFlow()">✕</button>
+      <button class="back-btn" onclick="goHome()">◀ ホームにもどる</button>
     </div>`;
 }
 
