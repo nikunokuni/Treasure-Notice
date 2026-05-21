@@ -454,6 +454,23 @@ function renderDayModal() {
         ${records.map(r => renderTakaraCard(r, false)).join('')}
       </div>
     </div>`;
+   function burstTreasures() {
+  const layer = document.createElement('div');
+  layer.className = 'cal-burst-wrap';
+  document.body.appendChild(layer);
+  const emojis = S.records.map(r => r.emoji).slice(0, 18);
+  const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+  emojis.forEach((emoji, i) => {
+    const el = document.createElement('div');
+    el.className = 'cal-burst-item';
+    const angle = (i / emojis.length) * Math.PI * 2;
+    const dist = 100 + Math.random() * 130;
+    el.style.cssText = `left:${cx}px;top:${cy}px;--tx:${Math.cos(angle)*dist|0}px;--ty:${Math.sin(angle)*dist|0}px;animation-delay:${i*0.045}s;`;
+    el.textContent = emoji;
+    layer.appendChild(el);
+  });
+  setTimeout(() => layer.remove(), 1800);
+}
 }
 
 // ── たからばこ ──
