@@ -546,6 +546,11 @@ function renderNote() {
 function renderFav() {
   const favs = S.records.filter(r=>r.bookmarked).slice().reverse();
   return `
+  <!-- バッジを最上部 -->
+    <div class="badge-section-top">
+      <div class="badge-section-ttl">🏅 かくとくしたバッヂ</div>
+      <div class="badge-grid">${renderBadges()}</div>
+    </div>
     <div class="content">
       <div style="font-family:'Kaisei Decol',serif;font-size:16px;color:var(--deep);margin-bottom:14px">
         ⭐ おきにいりのたから
