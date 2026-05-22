@@ -382,31 +382,40 @@ function renderSummary() {
 
   return `
     <div class="content">
-      <div class="summary-hero">
-        <span class="summary-hero-emoji">${esc(S.odai?.emoji || '🔍')}</span>
-        <div class="summary-hero-ttl">たからみつかった！</div>
-      </div>
+      <div id="summary-capture-area">
+        <div class="summary-hero">
+          <span class="summary-hero-emoji">${esc(S.odai?.emoji || '🔍')}</span>
+          <div class="summary-hero-ttl">たからみつかった！</div>
+        </div>
 
-      <div class="findings-card" id="summary-capture-area">
-        <button class="bookmark-btn ${S.bookmarked ? 'active' : ''}"
-                onclick="App.toggleBookmark()">🔖</button>
-        <div class="findings-label">✨ きょうみつけたたから</div>
-        ${items.length === 0
-          ? `<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(45,27,0,0.4)">
-               <span class="spinner"></span>まとめているよ…
-             </div>`
-          : items.map((f,i) => `
-              <div class="finding-item finding-item-anim"
-                   style="animation-delay:${0.1 + i * 0.18}s">
-                <div class="finding-dot" style="background:${colors[i % colors.length]}"></div>
-                <div class="finding-text">${esc(f)}</div>
-              </div>`).join('')}
-      </div>
+        <div class="findings-card">
+          <button class="bookmark-btn ${S.bookmarked ? 'active' : ''}"
+                  onclick="App.toggleBookmark()">🔖</button>
+          <div class="findings-label">✨ きょうみつけたたから</div>
+          ${items.length === 0
+            ? `<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(45,27,0,0.4)">
+                 <span class="spinner"></span>まとめているよ…
+               </div>`
+            : items.map((f,i) => `
+                <div class="finding-item finding-item-anim"
+                     style="animation-delay:${0.1 + i * 0.18}s">
+                  <div class="finding-dot" style="background:${colors[i % colors.length]}"></div>
+                  <div class="finding-text">${esc(f)}</div>
+                </div>`).join('')}
+        </div>
 
-      <!-- ④ 画像として保存ボタン -->
-      <button class="summary-save-btn" onclick="App.saveSummaryImage()">
-        📸 がぞうとしてほぞん
-      </button>
+        ${S.showOpinion ? `
+          <div class="ai-opinion-card">
+            <div class="ai-opinion-toggle" onclick="App.toggleOpinion()">
+              <div class="ai-opinion-label">💡 AIのかんがえ（おとな向け）</div>
+              <div class="ai-opinion-chevron ${S.opinionOpen ? 'open' : ''}">▾</div>
+            </div>
+            ${S.opinionOpen && paras.length > 0 ? `
+              <div class="ai-opinion-body">
+                ${paras.map(p => `<div class="ai-opinion-para">${esc(p)}</div>`).join('')}
+              </div>` : ''}
+          </div>` : ''}
+      </div>
 
       <!-- きろくノート（子ども記入欄） -->
       <div class="note-card">
@@ -416,21 +425,10 @@ function renderSummary() {
         <button class="note-save-btn" onclick="App.saveNote()">💾 ほぞんする</button>
       </div>
 
-      ${S.showOpinion ? `
-        <div class="ai-opinion-card">
-          <div class="ai-opinion-toggle" onclick="App.toggleOpinion()">
-            <div class="ai-opinion-label">💡 AIのかんがえ（おとな向け）</div>
-            <div class="ai-opinion-chevron ${S.opinionOpen ? 'open' : ''}">▾</div>
-          </div>
-          ${S.opinionOpen && paras.length > 0 ? `
-            <div class="ai-opinion-body">
-              ${paras.map(p => `<div class="ai-opinion-para">${esc(p)}</div>`).join('')}
-            </div>` : ''}
-        </div>` : ''}
-
       <div class="summary-actions">
         <button class="btn-again"     onclick="App.doAgain()">🔄 別のレンズで</button>
         <button class="btn-next-odai" onclick="App.nextOdai()">つぎのお題 ›</button>
+        <button class="summary-save-btn" onclick="App.saveSummaryImage()" title="がぞうとしてほぞん">📸</button>
       </div>
     </div>`;
 }
@@ -798,90 +796,3 @@ function renderSettings() {
 }
 
 // fmtDate / pickRand は tks-logic.js で定義（ODAI_ALL への依存のため）
-
-/* ═══════════════════════════════════════════════════════════
-   tks-style.css に追記が必要な差分CSS（v6対応）
-   ═══════════════════════════════════════════════════════════
-
-  // ① ホーム ストリークヒーロー
-  .hero-streak {
-    background: linear-gradient(135deg, var(--amber), var(--coral-light));
-    border-radius: 20px; padding: 14px 16px 12px; margin-bottom: 14px;
-    position: relative; overflow: hidden;
-    box-shadow: 0 6px 20px rgba(232,134,10,0.28);
-  }
-  .hero-streak::before { content:'🔥'; position:absolute; right:-8px; bottom:-10px; font-size:72px; opacity:.12; }
-  .hero-streak-top  { display:flex; align-items:center; justify-content:space-between; }
-  .hero-streak-label{ font-size:9px; color:rgba(255,255,255,0.75); letter-spacing:.18em; }
-  .hero-streak-num  { font-family:'Kaisei Decol',serif; font-size:38px; color:white; line-height:1; }
-  .hero-streak-unit { font-size:11px; color:rgba(255,255,255,0.8); }
-  .hero-streak-msg  { font-size:10px; color:rgba(255,255,255,0.85); margin-top:6px; line-height:1.5; }
-
-  // チャット プログレスバー＋ヒントバブル
-  .chat-progress-wrap  { padding:8px 14px 0; flex-shrink:0; background:var(--paper); }
-  .chat-progress-row   { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
-  .chat-progress-label { font-size:9px; color:rgba(45,27,0,0.45); letter-spacing:.1em; }
-  .chat-progress-count { font-size:9px; color:var(--amber); font-weight:700; }
-  .chat-progress-bar   { height:5px; background:rgba(232,134,10,0.12); border-radius:10px; overflow:hidden; margin-bottom:8px; }
-  .chat-progress-fill  { height:100%; background:linear-gradient(90deg,var(--amber),var(--coral-light)); border-radius:10px; transition:width .6s ease; }
-  .hint-bubble {
-    margin:0 14px 8px; padding:8px 12px;
-    background:rgba(255,209,102,0.15); border:1.5px solid rgba(232,134,10,0.2);
-    border-radius:14px; display:flex; align-items:flex-start; gap:8px;
-    animation:hint-pop .4s cubic-bezier(.34,1.56,.64,1);
-  }
-  @keyframes hint-pop { 0%{transform:scale(0.9);opacity:0;} 100%{transform:scale(1);opacity:1;} }
-  .hint-icon { font-size:15px; flex-shrink:0; }
-  .hint-text { font-size:10px; color:var(--deep); line-height:1.65; }
-  .hint-text strong { color:var(--amber); font-weight:700; }
-
-  // サマリー finding アニメーション
-  .finding-item-anim {
-    opacity:0; transform:translateY(10px);
-  }
-  .finding-item-visible {
-    animation:finding-in .5s cubic-bezier(.34,1.28,.64,1) forwards;
-  }
-  @keyframes finding-in {
-    0%  { opacity:0; transform:translateY(10px); }
-    100%{ opacity:1; transform:translateY(0); }
-  }
-
-  // サマリー保存ボタン
-  .summary-save-btn {
-    display:flex; align-items:center; justify-content:center; gap:7px;
-    width:100%; padding:10px; margin-bottom:10px;
-    background:white; color:var(--teal);
-    border:2px solid rgba(10,147,150,0.25); border-radius:14px;
-    font-family:'Zen Maru Gothic',sans-serif; font-size:12px; font-weight:700;
-    cursor:pointer; transition:all .15s;
-  }
-  .summary-save-btn:active { background:rgba(10,147,150,0.06); transform:translateY(1px); }
-
-  // back-btn（旧 chat-close-btn を置き換え）
-  .back-btn {
-    display:flex; align-items:center; gap:4px;
-    font-size:11px; color:var(--teal);
-    background:rgba(10,147,150,0.08); border:none; border-radius:20px;
-    padding:5px 11px; cursor:pointer; flex-shrink:0;
-    font-family:'Zen Maru Gothic',sans-serif; font-weight:700;
-    transition:background .15s;
-  }
-  .back-btn:active { background:rgba(10,147,150,0.15); }
-
-  // たからカード レンズ位置修正
-  .takara-item-meta {
-    display:flex; align-items:center; gap:5px;
-  }
-  .takara-item-meta--fav {
-    margin-right:26px;  // しおりボタン（18px）＋余白
-  }
-
-  // おきにいり バッジ上部セクション
-  .badge-section-top {
-    background:white; border-radius:14px; padding:11px 12px;
-    margin-bottom:12px; border:1.5px solid rgba(45,27,0,0.06);
-  }
-  .badge-section-ttl {
-    font-size:9px; letter-spacing:.2em; color:rgba(45,27,0,0.35); margin-bottom:9px;
-  }
