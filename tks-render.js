@@ -447,7 +447,7 @@ function renderSummary() {
         <button class="btn-next-odai" onclick="App.nextOdai()">つぎのお題 ›</button>
       </div>
     </div>`;
-}
+};
 
 // ③ サマリー描画後にアニメーション起動（render() の末尾から呼ぶ）
 function triggerFindingAnim() {
@@ -456,7 +456,7 @@ function triggerFindingAnim() {
       el.classList.add('finding-item-visible');
     });
   });
-},
+}
 async saveSummaryImage() {
   const el = document.getElementById('summary-capture-area');
   if (!el) return;
