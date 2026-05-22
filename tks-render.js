@@ -433,7 +433,7 @@ function renderSummary() {
         <button class="btn-next-odai" onclick="App.nextOdai()">つぎのお題 ›</button>
       </div>
     </div>`;
-};
+}
 
 // ③ サマリー描画後にアニメーション起動（render() の末尾から呼ぶ）
 function triggerFindingAnim() {
@@ -443,16 +443,6 @@ function triggerFindingAnim() {
     });
   });
 }
-async function saveSummaryImage() {
-  const el = document.getElementById('summary-capture-area');
-  if (!el) return;
-  const canvas = await html2canvas(el, { backgroundColor: '#fdf6e3', scale: 2 });
-  const a = document.createElement('a');
-  a.download = 'たからもの_' + (S.odai?.name || 'きろく') + '.png';
-  a.href = canvas.toDataURL('image/png');
-  a.click();
-}
-
 // ── カレンダー ──
 function renderCal() {
   const now   = new Date();
@@ -827,7 +817,7 @@ function renderSettings() {
   .hero-streak-unit { font-size:11px; color:rgba(255,255,255,0.8); }
   .hero-streak-msg  { font-size:10px; color:rgba(255,255,255,0.85); margin-top:6px; line-height:1.5; }
 
-  // ② チャット プログレスバー＋ヒントバブル
+  // チャット プログレスバー＋ヒントバブル
   .chat-progress-wrap  { padding:8px 14px 0; flex-shrink:0; background:var(--paper); }
   .chat-progress-row   { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
   .chat-progress-label { font-size:9px; color:rgba(45,27,0,0.45); letter-spacing:.1em; }
@@ -845,7 +835,7 @@ function renderSettings() {
   .hint-text { font-size:10px; color:var(--deep); line-height:1.65; }
   .hint-text strong { color:var(--amber); font-weight:700; }
 
-  // ③ サマリー finding アニメーション
+  // サマリー finding アニメーション
   .finding-item-anim {
     opacity:0; transform:translateY(10px);
   }
@@ -857,7 +847,7 @@ function renderSettings() {
     100%{ opacity:1; transform:translateY(0); }
   }
 
-  // ④ サマリー保存ボタン
+  // サマリー保存ボタン
   .summary-save-btn {
     display:flex; align-items:center; justify-content:center; gap:7px;
     width:100%; padding:10px; margin-bottom:10px;
@@ -868,7 +858,7 @@ function renderSettings() {
   }
   .summary-save-btn:active { background:rgba(10,147,150,0.06); transform:translateY(1px); }
 
-  // ⑤ back-btn（旧 chat-close-btn を置き換え）
+  // back-btn（旧 chat-close-btn を置き換え）
   .back-btn {
     display:flex; align-items:center; gap:4px;
     font-size:11px; color:var(--teal);
@@ -879,7 +869,7 @@ function renderSettings() {
   }
   .back-btn:active { background:rgba(10,147,150,0.15); }
 
-  // ⑥ たからカード レンズ位置修正
+  // たからカード レンズ位置修正
   .takara-item-meta {
     display:flex; align-items:center; gap:5px;
   }
@@ -887,7 +877,7 @@ function renderSettings() {
     margin-right:26px;  // しおりボタン（18px）＋余白
   }
 
-  // ⑦ おきにいり バッジ上部セクション
+  // おきにいり バッジ上部セクション
   .badge-section-top {
     background:white; border-radius:14px; padding:11px 12px;
     margin-bottom:12px; border:1.5px solid rgba(45,27,0,0.06);
@@ -895,33 +885,3 @@ function renderSettings() {
   .badge-section-ttl {
     font-size:9px; letter-spacing:.2em; color:rgba(45,27,0,0.35); margin-bottom:9px;
   }
-
-   ※ カレンダー .cal-streak は不要になったので削除可（ヒーロー移動のため）
-
-   ═══════════════════════════════════════════════════════════
-   tks-logic.js（または App オブジェクト）に追記が必要な差分JS
-   ═══════════════════════════════════════════════════════════
-
-  // ⑧ カレンダータブ切り替え時にバースト
-  // App.switchTab の case 'cal' に追記:
-  //   setTimeout(triggerCalBurst, 120);
-
-  // ③ サマリー render 後にアニメーション起動
-  // render() 内で S.screen === 'summary' の直後:
-  //   if (S.screen === 'summary') setTimeout(triggerFindingAnim, 50);
-
-  // ④ 画像保存（html2canvas 使用）
-  // <head> に追加:
-  //   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  //
-  // App に追加:
-  //   saveSummaryImage: async function() {
-  //     const el = document.getElementById('summary-capture-area');
-  //     if (!el) return;
-  //     const canvas = await html2canvas(el, { backgroundColor:'#fdf6e3', scale:2 });
-  //     const a = document.createElement('a');
-  //     a.download = 'たからもの_' + (S.odai?.name || 'きろく') + '.png';
-  //     a.href = canvas.toDataURL('image/png');
-  //     a.click();
-  //   },
-   ═══════════════════════════════════════════════════════════ */
