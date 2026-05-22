@@ -451,7 +451,7 @@ async function saveSummaryImage() {
   a.download = 'たからもの_' + (S.odai?.name || 'きろく') + '.png';
   a.href = canvas.toDataURL('image/png');
   a.click();
-},
+}
 
 // ── カレンダー ──
 function renderCal() {
