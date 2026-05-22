@@ -404,7 +404,7 @@ function weeklyReportSystem() {
   ).join('\n');
 
   return `あなたは子どもの学びを見守るアドバイザーです。
-以下は${u.name}さん（${AGE_GROUPS.find(a=>a.id===u.ageGroup)?.label||''}）の今週（7日間）のたからさがしの記録です。
+以下は${u.name}さん（${agePrompts.find(a=>a.id===u.ageGroup)?.label||''}）の今週（7日間）のたからさがしの記録です。
 
 ${summary}
 
@@ -456,6 +456,7 @@ function render() {
 
 // ── イベントバインド ──
 function bindEvents() {
+  const root = $id('screen-root');
   const ci = $id('chat-in');
   if (ci) ci.addEventListener('keydown', e => { if(e.key==='Enter') App.sendChat(); });
 
@@ -514,8 +515,6 @@ function bindEvents() {
     });
   }
 
-  // スクリーンrootは bindEvents 内で使う
-  const root = $id('screen-root');
 }
 
 function scrollChat() {
@@ -955,9 +954,23 @@ const App = {
     }
   },
 
+  // ── 画像として保存 ──
+  async saveSummaryImage() {
+    const el = document.getElementById('summary-capture-area');
+    if (!el) return;
+    try {
+      const canvas = await html2canvas(el, { backgroundColor: '#fdf6e3', scale: 2 });
+      const a = document.createElement('a');
+      a.download = 'たからもの_' + (S.odai?.name || 'きろく') + '.png';
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+    } catch(err) {
+      console.error('saveSummaryImage error:', err);
+    }
+  },
+
   // ── PWA アップデート適用 ──
-  applyUpdate() {
-    if (App._waitingSW) {
+  applyUpdate() {    if (App._waitingSW) {
       App._waitingSW.postMessage('skipWaiting');
     } else {
       window.location.reload();
