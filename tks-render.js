@@ -457,6 +457,15 @@ function triggerFindingAnim() {
     });
   });
 }
+async saveSummaryImage() {
+  const el = document.getElementById('summary-capture-area');
+  if (!el) return;
+  const canvas = await html2canvas(el, { backgroundColor: '#fdf6e3', scale: 2 });
+  const a = document.createElement('a');
+  a.download = 'たからもの_' + (S.odai?.name || 'きろく') + '.png';
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+},
 
 // ── カレンダー ──
 function renderCal() {
