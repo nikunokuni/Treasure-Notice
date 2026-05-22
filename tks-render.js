@@ -14,20 +14,6 @@ function esc(str) {
 function aiText(str) {
   return esc(str).replace(/\n/g,'<br>');
 }
-
-/* ═══════════════════════════════
-   たからさがし — render  v6
-   変更点：
-   ① ストリークをホーム・ヒーローエリアへ移動
-   ② チャット上部にプログレスバー＋ヒントバブル追加
-   ③ サマリー finding-item に順番アニメーション
-   ④ サマリーに「がぞうとしてほぞん」ボタン追加
-   ⑤ chat-close-btn → back-btn（◀ ホームにもどる）
-   ⑥ たからばこ：レンズをアイコン・名前の横に表示、しおりと重ならない
-   ⑦ おきにいり：バッジをリスト上部に移動
-   ⑧ カレンダータブを開いたときお宝バースト演出
-   ═══════════════════════════════ */
-
 function renderTabs() {
   const tabs = [
     { id:'home', icon:'🏠', label:'ホーム',       cls:'tab-home' },
@@ -680,7 +666,6 @@ function renderFav() {
 }
 
 // ── たからカード（共通） ──
-// ⑥ レンズタグをアイコン・名前の横（右端）に表示。しおりボタンと重ならないよう meta にまとめる。
 function renderTakaraCard(r, showFavBtn) {
   const lens   = LENSES.find(l=>l.id===r.lens);
   const colors = ['#e8860a','#0a9396','#e76f51','#52b788','#9b89c4','#ffd166'];
