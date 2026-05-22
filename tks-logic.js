@@ -1,942 +1,1001 @@
 /* ═══════════════════════════════
-   UTILS — XSS-safe text escaping
-   ═══════════════════════════════ */
-function esc(str) {
-  if (typeof str !== 'string') return '';
-  return str
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;')
-    .replace(/'/g,'&#39;');
-}
-// AIレスポンス（信頼テキスト）の改行だけ許可
-function aiText(str) {
-  return esc(str).replace(/\n/g,'<br>');
-}
-
-/* ═══════════════════════════════
-   たからさがし — render  v6
-   変更点：
-   ① ストリークをホーム・ヒーローエリアへ移動
-   ② チャット上部にプログレスバー＋ヒントバブル追加
-   ③ サマリー finding-item に順番アニメーション
-   ④ サマリーに「がぞうとしてほぞん」ボタン追加
-   ⑤ chat-close-btn → back-btn（◀ ホームにもどる）
-   ⑥ たからばこ：レンズをアイコン・名前の横に表示、しおりと重ならない
-   ⑦ おきにいり：バッジをリスト上部に移動
-   ⑧ カレンダータブを開いたときお宝バースト演出
+   たからさがし — logic  v5
    ═══════════════════════════════ */
 
-function renderTabs() {
-  const tabs = [
-    { id:'home', icon:'🏠', label:'ホーム',       cls:'tab-home' },
-    { id:'cal',  icon:'🗓️', label:'カレンダー',   cls:'tab-cal'  },
-    { id:'box',  icon:'📦', label:'たからばこ',   cls:'tab-box'  },
-    { id:'note', icon:'📓', label:'ノート',       cls:'tab-note' },
-    { id:'fav',  icon:'⭐', label:'おきにいり',   cls:'tab-fav'  },
-    { id:'set',  icon:'⚙️', label:'せってい',     cls:'tab-set'  },
-  ];
-  return `
-    <div class="tabs">
-      ${tabs.map(t => `
-        <div class="tab ${t.cls} ${S.tab === t.id ? 'active' : ''}"
-             onclick="App.switchTab('${t.id}')">
-          <span class="tab-icon">${t.icon}</span>
-          <span class="tab-label">${t.label}</span>
-        </div>`).join('')}
-    </div>
-    <div class="tab-line"></div>`;
+// ── 定数 ──
+const PARENT_OPTS = ['パパ','ママ','ともだち','その他'];
+
+const TYPES = [
+  { id:'A', icon:'👀', name:'はっけん',
+    desc:'じっくり観察する。「あ、これ見て！」' },
+  { id:'B', icon:'📚', name:'しらべる',
+    desc:'正しい知識が好き。「ほんとうは何？」' },
+  { id:'C', icon:'🔭', name:'そうぞう',
+    desc:'見えない部分を推理する。「もしかして〜かな？」' },
+];
+
+const AGE_GROUPS = [
+  { id:'young',  label:'3〜5さい',  icon:'🐣', desc:'ひらがなメイン・短い文・五感中心' },
+  { id:'middle', label:'6〜8さい',  icon:'🌱', desc:'すこし複雑な問いかけも楽しめる' },
+  { id:'older',  label:'9〜12さい', icon:'🌳', desc:'論理的な思考・深い考察も可能' },
+];
+
+// 日常的に触れそうなお題（大幅拡張）
+const ODAI_ALL = [
+  // 空・気象
+  {emoji:'☁️',name:'くも',         label:'そら'},
+  {emoji:'💧',name:'みず',         label:'自然'},
+  {emoji:'🌙',name:'つき',         label:'そら'},
+  {emoji:'🌈',name:'にじ',         label:'そら'},
+  {emoji:'🌧',name:'あめ',         label:'お天気'},
+  {emoji:'🌬',name:'かぜ',         label:'自然'},
+  {emoji:'☀️',name:'たいよう',     label:'そら'},
+  {emoji:'⛅',name:'くもりそら',   label:'そら'},
+  {emoji:'❄️',name:'ゆき',         label:'お天気'},
+  {emoji:'🌫',name:'きり',         label:'お天気'},
+  // 乗り物・まち
+  {emoji:'🚗',name:'くるま',       label:'のりもの'},
+  {emoji:'🚂',name:'でんしゃ',     label:'のりもの'},
+  {emoji:'🚌',name:'バス',         label:'のりもの'},
+  {emoji:'🚲',name:'じてんしゃ',   label:'のりもの'},
+  {emoji:'✈️',name:'ひこうき',     label:'のりもの'},
+  {emoji:'🚑',name:'きゅうきゅうしゃ',label:'のりもの'},
+  {emoji:'🚒',name:'しょうぼうしゃ',label:'のりもの'},
+  {emoji:'🏗',name:'クレーン',     label:'まち'},
+  {emoji:'🚦',name:'しんごう',     label:'まち'},
+  {emoji:'🏪',name:'コンビニ',     label:'まち'},
+  {emoji:'📮',name:'ポスト',       label:'まち'},
+  {emoji:'🕳',name:'マンホール',   label:'まち'},
+  // 自然・いきもの
+  {emoji:'🌳',name:'き',           label:'自然'},
+  {emoji:'🌸',name:'さくら',       label:'自然'},
+  {emoji:'🍂',name:'おちば',       label:'自然'},
+  {emoji:'🌿',name:'くさ',         label:'自然'},
+  {emoji:'🐝',name:'みつばち',     label:'いきもの'},
+  {emoji:'🐛',name:'いもむし',     label:'いきもの'},
+  {emoji:'🐜',name:'あり',         label:'いきもの'},
+  {emoji:'🐦',name:'とり',         label:'いきもの'},
+  {emoji:'🐟',name:'さかな',       label:'いきもの'},
+  {emoji:'🦋',name:'ちょうちょ',   label:'いきもの'},
+  {emoji:'🐌',name:'かたつむり',   label:'いきもの'},
+  {emoji:'🌻',name:'ひまわり',     label:'自然'},
+  {emoji:'🍄',name:'きのこ',       label:'自然'},
+  // 食べもの・くらし
+  {emoji:'🍚',name:'ごはん',       label:'たべもの'},
+  {emoji:'🍞',name:'パン',         label:'たべもの'},
+  {emoji:'🥚',name:'たまご',       label:'たべもの'},
+  {emoji:'🥛',name:'ぎゅうにゅう', label:'たべもの'},
+  {emoji:'🧅',name:'たまねぎ',     label:'たべもの'},
+  {emoji:'🍎',name:'りんご',       label:'たべもの'},
+  {emoji:'🥦',name:'ブロッコリー', label:'たべもの'},
+  {emoji:'🥕',name:'にんじん',     label:'たべもの'},
+  // 家のなか
+  {emoji:'🪞',name:'かがみ',       label:'いえのなか'},
+  {emoji:'💡',name:'でんきゅう',   label:'いえのなか'},
+  {emoji:'🚿',name:'シャワー',     label:'いえのなか'},
+  {emoji:'🪥',name:'はぶらし',     label:'いえのなか'},
+  {emoji:'📺',name:'テレビ',       label:'いえのなか'},
+  {emoji:'🧲',name:'じしゃく',     label:'いえのなか'},
+  {emoji:'🔦',name:'かいちゅうでんとう',label:'いえのなか'},
+  // 体・感覚
+  {emoji:'🤲',name:'て',           label:'からだ'},
+  {emoji:'👣',name:'あしあと',     label:'からだ'},
+  {emoji:'💨',name:'いき',         label:'からだ'},
+  {emoji:'❤️',name:'しんぞう',     label:'からだ'},
+  // 学校・公園
+  {emoji:'📏',name:'ものさし',     label:'がっこう'},
+  {emoji:'✏️',name:'えんぴつ',     label:'がっこう'},
+  {emoji:'📚',name:'ほん',         label:'がっこう'},
+  {emoji:'🎒',name:'ランドセル',   label:'がっこう'},
+  {emoji:'🛝',name:'すべりだい',   label:'こうえん'},
+  {emoji:'🌰',name:'どんぐり',     label:'こうえん'},
+  {emoji:'🪨',name:'いし',         label:'こうえん'},
+];
+
+const LENSES = [
+  {id:'ことば',   icon:'📖', name:'ことば',
+   desc:'言葉・表現・言い方',
+   kidDesc:'どんなことばでいえるかな？ ことばあそびもしよう！',
+   cls:'lens-ことば'},
+  {id:'かず',     icon:'🔢', name:'かず',
+   desc:'数・形・パターン',
+   kidDesc:'かずや かたち・おおきさを くらべてみよう！',
+   cls:'lens-かず'},
+  {id:'かがく',   icon:'🔬', name:'かがく',
+   desc:'しくみ・なぜ？を探る',
+   kidDesc:'なんで？どうして？を いっしょに かんがえよう！',
+   cls:'lens-かがく'},
+  {id:'しゃかい', icon:'🗺', name:'しゃかい',
+   desc:'人・社会・つながり',
+   kidDesc:'だれが つくったの？どこから きたの？',
+   cls:'lens-しゃかい'},
+  {id:'えいご',   icon:'🌍', name:'えいご',
+   desc:'英語で言うと？',
+   kidDesc:'えいごでいうと なんていうんだろう？',
+   cls:'lens-えいご'},
+  {id:'じぶん',   icon:'💛', name:'じぶん',
+   desc:'今どう感じてる？',
+   kidDesc:'きみはどう おもった？ すき？きらい？なんで？',
+   cls:'lens-じぶん'},
+];
+
+// ── ユーティリティ（render.jsから参照されるためここで定義） ──
+function fmtDate(iso) {
+  const d = new Date(iso);
+  return `${d.getMonth()+1}月${d.getDate()}日`;
+}
+function pickRand() {
+  return ODAI_ALL[Math.floor(Math.random() * ODAI_ALL.length)];
 }
 
-function renderChatHeader() {
-  const lens = LENSES.find(l => l.id === S.lens);
-  return `
-    <div class="chat-header">
-      <div class="chat-header-info">
-        <span class="chat-header-emoji">${esc(S.odai?.emoji || '')}</span>
-        <span class="chat-header-name">${esc(S.odai?.name || '')}</span>
-        ${lens ? `<span class="chat-header-lens">${lens.icon} ${esc(lens.name)}</span>` : ''}
-      </div>
-      <button class="back-btn" onclick="App.closeChatFlow()">◀ ホームにもどる</button>
-    </div>`;
-}
-
-// ── オンボーディング ──
-function renderOnboard() {
-  const s = S.step;
-  const u = S.user;
-  const dots = [0,1,2,3].map(i =>
-    `<div class="step-dot ${i < s ? 'done' : i === s ? 'active' : ''}"></div>`
-  ).join('');
-
-  let body = '';
-  if (s === 0) {
-    body = `
-      <div class="form-block">
-        <div class="form-label">お子さんの <em>呼び方</em></div>
-        <input class="form-input" id="ob-name" placeholder="例：はるくん" value="${esc(u.name)}">
-        <div class="form-error" id="ob-name-err">なまえをいれてください</div>
-      </div>
-      <div class="form-block">
-        <div class="form-label"><em>ねんれい</em>をえらんでね</div>
-        <div class="age-grid">${renderAgeCards(u.ageGroup)}</div>
-      </div>`;
-  } else if (s === 1) {
-    body = `
-      <div class="form-block">
-        <div class="form-label"><em>まなびのタイプ</em>をえらんでね</div>
-        <div class="type-grid">${renderTypeCards(u.type)}</div>
-      </div>`;
-  } else if (s === 2) {
-    body = `
-      <div class="form-block">
-        <div class="form-label">すきなもの <em>（じゆうに）</em></div>
-        <input class="form-input" id="ob-likes" placeholder="ポケモン・サッカー…" value="${esc(u.likes)}">
-      </div>
-      <div class="form-block">
-        <div class="form-label">とくいなこと</div>
-        <input class="form-input" id="ob-str" placeholder="えをかくこと…" value="${esc(u.strengths)}">
-      </div>`;
-  } else {
-    body = `
-      <div class="form-block">
-        <div class="form-label"><em>いっしょにするひと</em>のよびかた</div>
-        <div class="parent-chips">${renderParentChips(u.parentName)}</div>
-      </div>
-      <p style="font-size:11px;color:rgba(45,27,0,0.4);line-height:1.7;text-align:center;padding:0 8px;margin-top:4px">
-        ⚙️ せってい からいつでも変えられます
-      </p>`;
-  }
-
-  return `
-    <div class="onboard-wrap">
-      <div class="onboard-hero">
-        <span class="onboard-emoji">🔍</span>
-        <div class="onboard-ttl">たから<em>さがし</em></div>
-        <div class="onboard-sub">毎日のふとした気づきが、<br>学びのたからになる</div>
-      </div>
-      <div class="step-dots">${dots}</div>
-      ${body}
-      <div style="padding-top:18px">
-        <button class="btn-primary" onclick="App.obNext()">
-          ${s < 3 ? 'つぎへ ›' : 'はじめる 🔍'}
-        </button>
-        ${s > 0 ? `<button class="btn-secondary" onclick="App.obBack()">← もどる</button>` : ''}
-      </div>
-    </div>`;
-}
-
-function renderAgeCards(current) {
-  return agePrompts.map(a => `
-    <div class="type-card ${current === a.id ? 'sel-age' : ''}"
-         onclick="App.setAge('${a.id}')">
-      <div class="type-badge type-badge-age">${a.icon}</div>
-      <div class="type-info">
-        <div class="type-name">${a.label}</div>
-        <div class="type-desc">${a.desc}</div>
-      </div>
-    </div>`).join('');
-}
-
-function renderTypeCards(current) {
-  return TYPES.map(t => `
-    <div class="type-card ${current === t.id ? 'sel-' + t.id : ''}"
-         onclick="App.setType('${t.id}')">
-      <div class="type-badge type-badge-${t.id}">${t.icon}</div>
-      <div class="type-info">
-        <div class="type-name">${t.name}</div>
-        <div class="type-desc">${t.desc}</div>
-      </div>
-    </div>`).join('');
-}
-
-function renderParentChips(current) {
-  return PARENT_OPTS.map(p => `
-    <div class="parent-chip ${current === p ? 'sel' : ''}"
-         onclick="App.setParent('${esc(p)}')">${esc(p)}</div>`).join('');
-}
-
-// ── ホーム ──
-function renderHome() {
-  const u    = S.user;
-  const type = TYPES.find(t => t.id === u.type) || TYPES[0];
-  const age  = agePrompts.find(a => a.id === (u.ageGroup||'young')) || agePrompts[0];
-  const rec  = S.records.slice(-3).reverse();
-  const r    = S.randOdai || pickRand();
-  if (!S.randOdai) S.randOdai = r;
-
-  // ① ストリーク：今週7日分のドット
-  const today  = new Date();
-  const weekDots = Array.from({length: 7}, (_, i) => {
-    const d = new Date(today);
-    d.setDate(today.getDate() - (6 - i));
-    const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-    const done = S.records.some(rec => {
-      const rd = new Date(rec.date);
-      return rd.getFullYear() === d.getFullYear()
-          && rd.getMonth()    === d.getMonth()
-          && rd.getDate()     === d.getDate();
-    });
-    const isToday = i === 6;
-    return `<span style="font-size:${isToday?'18':'15'}px;opacity:${done?'1':'0.35'}">${done ? '✅' : (isToday ? '⭕' : '○')}</span>`;
-  }).join('');
-
-  const streakMsg = S.streak === 0
-    ? 'きょうからはじめよう！'
-    : S.streak < 3
-    ? `${S.streak}にちれんぞく！このちょうしで！`
-    : S.streak < 7
-    ? `すごい！${S.streak}にちれんぞく中🎉`
-    : `${S.streak}にち！もうヒーローだ⭐`;
-
-  return `
-    <div class="content">
-      <!-- ① ストリーク ヒーローエリア -->
-      <div class="hero-streak">
-        <div class="hero-streak-top">
-          <div>
-            <div class="hero-streak-label">🔥 れんぞくきろく</div>
-            <div style="display:flex;align-items:baseline;gap:4px;margin-top:3px">
-              <span class="hero-streak-num">${S.streak}</span>
-              <span class="hero-streak-unit">にち</span>
-            </div>
-          </div>
-          <div style="display:flex;gap:3px;align-items:center">${weekDots}</div>
-        </div>
-        <div class="hero-streak-msg">${streakMsg}</div>
-      </div>
-
-      <div class="home-greeting">
-        <span class="home-greeting-emoji">🔍</span>
-        <div>
-          <div class="home-greeting-name">${esc(u.name)}、きょうも探検しよう！</div>
-          <div style="font-size:11px;color:rgba(45,27,0,0.45)">きになること、なんでもOK</div>
-        </div>
-      </div>
-      <div style="display:flex;gap:6px;align-items:center;margin-bottom:14px">
-        <div class="home-type-badge htb-${type.id}" onclick="App.switchTab('set')" style="margin-bottom:0">
-          ${type.icon} ${esc(type.name)} ›
-        </div>
-        <div class="home-type-badge htb-age" onclick="App.switchTab('set')" style="margin-bottom:0">
-          ${age.icon} ${esc(age.label)} ›
-        </div>
-      </div>
-
-      ${S.odaiGenerating ? `
-        <div class="odai-generating">
-          <span class="spinner"></span>
-          <div style="font-size:13px;color:rgba(45,27,0,0.5)">きょうのお題をかんがえてるよ…</div>
-        </div>` : `
-        <div class="odai-random" id="rand-card">
-          <span class="odai-random-icon">${r.emoji}</span>
-          <div>
-            <div class="odai-random-label">🎲 ランダム</div>
-            <div class="odai-random-name">${esc(r.name)}</div>
-          </div>
-          <span class="odai-random-arrow">›</span>
-          <button class="reroll-btn" id="reroll-btn">ふりなおす</button>
-        </div>`}
-
-      <div class="free-section">
-        <div class="free-label">✏️ いまどんなことが気になってる？</div>
-        <div class="free-row">
-          <input class="free-input" id="free-in" placeholder="なんでもにゅうりょくしてね…">
-          <button class="free-go" id="free-go-btn">➤</button>
-        </div>
-      </div>
-
-      <div class="photo-row">
-        <input type="file" accept="image/*" id="photo-input">
-        <span class="photo-row-icon">📷</span>
-        <div>
-          <div class="photo-row-ttl">しゃしんでお題をつくる</div>
-          <div class="photo-row-sub">とった写真をAIがよみとるよ</div>
-        </div>
-        <span style="font-size:17px;color:rgba(10,147,150,0.4)">›</span>
-      </div>
-
-      ${rec.length > 0 ? `
-        <div class="section-ttl" style="margin-top:12px">さいきんのたから</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          ${rec.map(r => `
-            <div style="padding:6px 12px;border-radius:20px;background:var(--amber-pale);color:var(--amber);font-size:11px;font-weight:700;cursor:pointer"
-                 onclick='App.replayOdai(${JSON.stringify(r.odai)})'>
-              ${r.odai.emoji} ${esc(r.odai.name)}
-            </div>`).join('')}
-        </div>` : ''}
-    </div>`;
-}
-
-// ── レンズ選択 ──
-function renderLens() {
-  return `
-    <div class="content">
-      <div style="margin-bottom:12px">
-        <div class="odai-pill">
-          <span class="odai-pill-emoji">${esc(S.odai.emoji)}</span>
-          <span class="odai-pill-name">${esc(S.odai.name)}</span>
-        </div>
-      </div>
-      <div class="lens-hint">どのレンズでみてみる？<br>ひとつだけえらんでね 🔍</div>
-      <div class="lens-grid">
-        ${LENSES.map(l => `
-          <div class="lens-card ${l.cls} ${S.lens === l.id ? 'selected' : ''}"
-               onclick="App.selectLens('${l.id}')">
-            <div style="display:flex;align-items:center;gap:8px">
-              <span class="lens-icon">${l.icon}</span>
-              <div class="lens-name">${esc(l.name)}</div>
-            </div>
-            <div class="lens-desc">${esc(l.kidDesc)}</div>
-          </div>`).join('')}
-      </div>
-      <button class="btn-dark" onclick="App.startChat()" ${!S.lens ? 'disabled' : ''}>
-        ${!S.lens ? 'レンズをえらんでね' : `${LENSES.find(l=>l.id===S.lens)?.icon} ${esc(S.lens)}レンズではじめる ›`}
-      </button>
-      <button class="btn-secondary" onclick="App.closeChatFlow()">← お題にもどる</button>
-    </div>`;
-}
-
-// ── チャット ──
-function renderChat() {
-  const u = S.user;
-  const userMsgCount = S.messages.filter(m => m.role !== 'ai').length;
-  const lens = LENSES.find(l => l.id === S.lens);
-
-  // ② プログレスバー：10往復を満タンとする
-  const CHAT_MAX = 10;
-  const progress = Math.min(userMsgCount / CHAT_MAX, 1);
-  const pct      = Math.round(progress * 100);
-
-  // レンズ別ヒント（最初の発言後に1回だけ表示）
-  const LENS_HINTS = {
-    'ことば':  'きょうのたからをあらわす<strong>おもしろいことば</strong>、みつかったかな？',
-    'かず':    '<strong>おおきさ・かず・かたち</strong>をよくみてみよう！くらべてみると楽しいよ',
-    'かがく':  '<strong>なぜ？どうして？</strong>って思ったら、ぜひ聞いてみよう！',
-    'しゃかい': 'だれかの<strong>やくに立ってる</strong>かな？どうやって作られてるんだろう？',
-    'えいご':  'このたから、えいごでなんていうか<strong>いっしょに調べよう</strong>🇺🇸',
-    'じぶん':  '<strong>どんなきもち</strong>がした？すきかきらいか、なんでも話してみよう',
-  };
-  const hintText  = lens ? (LENS_HINTS[lens.id] || LENS_HINTS[lens.name] || '') : '';
-  const showHint  = hintText && userMsgCount >= 1 && userMsgCount <= 3;
-
-  return `
-    <div class="chat-progress-wrap">
-      <div class="chat-progress-row">
-        <span class="chat-progress-label">おはなしのながれ</span>
-        <span class="chat-progress-count">${userMsgCount} / ${CHAT_MAX}</span>
-      </div>
-      <div class="chat-progress-bar">
-        <div class="chat-progress-fill" style="width:${pct}%"></div>
-      </div>
-    </div>
-    ${showHint ? `
-      <div class="hint-bubble">
-        <span class="hint-icon">💡</span>
-        <div class="hint-text">${hintText}</div>
-      </div>` : ''}
-    <div class="chat-wrap">
-      <div class="speaker-row">
-        <div class="speaker-btn ${S.speaker === 'child'  ? 'active-child'  : ''}"
-             onclick="App.setSpeaker('child')">👦 ${esc(u.name || 'こども')}</div>
-        <div class="speaker-btn ${S.speaker === 'parent' ? 'active-parent' : ''}"
-             onclick="App.setSpeaker('parent')">👨 ${esc(u.parentName)}</div>
-      </div>
-      <div class="chat-area" id="chat-area">
-        ${S.messages.map(renderBubble).join('')}
-        ${S.isLoading ? `
-          <div class="bubble-ai">
-            <div class="ai-avatar">🔍</div>
-            <div class="bubble-ai-text">
-              <div class="typing-dots"><span></span><span></span><span></span></div>
-            </div>
-          </div>` : ''}
-        ${S.lastError ? `
-          <div class="chat-error-row">
-            ⚠️ つながらなかったよ
-            <button class="retry-btn" onclick="App.retryLastSend()">もう一度</button>
-          </div>` : ''}
-      </div>
-      <div class="chat-input-row">
-        <input class="chat-input" id="chat-in"
-          placeholder="${S.speaker === 'child' ? 'かんがえてみよう…' : esc(u.parentName) + 'もかんがえてみよう…'}"
-          ${S.isLoading ? 'disabled' : ''}>
-        <button class="chat-send" id="chat-send" onclick="App.sendChat()"
-          ${S.isLoading ? 'disabled' : ''}>➤</button>
-      </div>
-      ${userMsgCount >= 5
-        ? `<button class="finish-btn" onclick="App.goSummary()">きょうのたからをまとめる ✨</button>`
-        : `<div style="text-align:center;font-size:10px;color:rgba(45,27,0,0.3);margin-bottom:4px">あと${5 - userMsgCount}かい話したらまとめられるよ</div>`}
-    </div>`;
-}
-
-function renderBubble(m) {
-  if (m.role === 'ai') return `
-    <div class="bubble-ai">
-      <div class="ai-avatar">🔍</div>
-      <div class="bubble-ai-text">${aiText(m.text)}</div>
-    </div>`;
-  if (m.role === 'child') return `
-    <div class="bubble-child"><div class="bubble-child-text">${esc(m.text)}</div></div>`;
-  return `
-    <div class="bubble-parent-wrap">
-      <div class="bubble-parent-who">${esc(S.user.parentName)}</div>
-      <div style="display:flex;justify-content:flex-end">
-        <div class="bubble-parent-text">${esc(m.text)}</div>
-      </div>
-    </div>`;
-}
-
-// ── サマリー ──
-function renderSummary() {
-  const items = S.summaryItems;
-  const paras = S.summaryOpinion.split(/\n/).filter(Boolean);
-  const colors = ['#e8860a','#0a9396','#e76f51','#52b788','#9b89c4','#ffd166'];
-  const savedNote = S.currentNote || '';
-
-  return `
-    <div class="content">
-      <div class="summary-hero">
-        <span class="summary-hero-emoji">${esc(S.odai?.emoji || '🔍')}</span>
-        <div class="summary-hero-ttl">たからみつかった！</div>
-      </div>
-
-      <div class="findings-card" id="summary-capture-area">
-        <button class="bookmark-btn ${S.bookmarked ? 'active' : ''}"
-                onclick="App.toggleBookmark()">🔖</button>
-        <div class="findings-label">✨ きょうみつけたたから</div>
-        ${items.length === 0
-          ? `<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(45,27,0,0.4)">
-               <span class="spinner"></span>まとめているよ…
-             </div>`
-          : items.map((f,i) => `
-              <div class="finding-item finding-item-anim"
-                   style="animation-delay:${0.1 + i * 0.18}s">
-                <div class="finding-dot" style="background:${colors[i % colors.length]}"></div>
-                <div class="finding-text">${esc(f)}</div>
-              </div>`).join('')}
-      </div>
-
-      <!-- ④ 画像として保存ボタン -->
-      <button class="summary-save-btn" onclick="App.saveSummaryImage()">
-        📸 がぞうとしてほぞん
-      </button>
-
-      <!-- きろくノート（子ども記入欄） -->
-      <div class="note-card">
-        <div class="note-label">📓 じぶんのきろくノート</div>
-        <div style="font-size:10px;color:rgba(45,27,0,0.45);margin-bottom:6px">きょう気づいたこと、おもったことをかいてみよう</div>
-        <textarea class="note-textarea" id="note-input" placeholder="（じゆうにかいてね）">${esc(savedNote)}</textarea>
-        <button class="note-save-btn" onclick="App.saveNote()">💾 ほぞんする</button>
-      </div>
-
-      ${S.showOpinion ? `
-        <div class="ai-opinion-card">
-          <div class="ai-opinion-toggle" onclick="App.toggleOpinion()">
-            <div class="ai-opinion-label">💡 AIのかんがえ（おとな向け）</div>
-            <div class="ai-opinion-chevron ${S.opinionOpen ? 'open' : ''}">▾</div>
-          </div>
-          ${S.opinionOpen && paras.length > 0 ? `
-            <div class="ai-opinion-body">
-              ${paras.map(p => `<div class="ai-opinion-para">${esc(p)}</div>`).join('')}
-            </div>` : ''}
-        </div>` : ''}
-
-      <div class="summary-actions">
-        <button class="btn-again"     onclick="App.doAgain()">🔄 別のレンズで</button>
-        <button class="btn-next-odai" onclick="App.nextOdai()">つぎのお題 ›</button>
-      </div>
-    </div>`;
+// ── State ──
+const S = {
+  onboarded: false,
+  step: 0,
+  user: { name:'', type:'A', ageGroup:'young', likes:'', strengths:'', parentName:'ママ' },
+  tab:  'home',
+  flow: 'home',
+  odai: null,
+  lens: null,
+  randOdai: null,
+  odaiGenerating: false,
+  messages: [],
+  speaker: 'child',
+  isLoading: false,
+  lastError: false,
+  lastSendPayload: null, // リトライ用
+  summaryItems: [],
+  summaryOpinion: '',
+  opinionOpen: false,
+  showOpinion: true,
+  bookmarked: false,
+  currentNote: '',
+  calYear:  null,
+  calMonth: null,
+  dayModal: null,
+  records: [],
+  streak: 0,
+  _lastPlayDate: null,
+  _savedThisSession: false,
+  fontSize: 'medium',
+  weeklyReport: '',
+  reportLoading: false,
 };
 
-// ③ サマリー描画後にアニメーション起動（render() の末尾から呼ぶ）
-function triggerFindingAnim() {
-  requestAnimationFrame(() => {
-    document.querySelectorAll('.finding-item-anim').forEach(el => {
-      el.classList.add('finding-item-visible');
-    });
-  });
-}
-async function saveSummaryImage() {
-  const el = document.getElementById('summary-capture-area');
-  if (!el) return;
-  const canvas = await html2canvas(el, { backgroundColor: '#fdf6e3', scale: 2 });
-  const a = document.createElement('a');
-  a.download = 'たからもの_' + (S.odai?.name || 'きろく') + '.png';
-  a.href = canvas.toDataURL('image/png');
-  a.click();
+// ── localStorage 永続化 ──
+const STORAGE_KEY = 'tks_v6_state';
+const STORAGE_KEY_OLD = 'tks_v5_state'; // マイグレーション用
+
+function persistSave() {
+  try {
+    const toSave = {
+      onboarded:     S.onboarded,
+      user:          S.user,
+      records:       S.records,
+      streak:        S.streak,
+      _lastPlayDate: S._lastPlayDate,
+      showOpinion:   S.showOpinion,
+      fontSize:      S.fontSize,
+      weeklyReport:  S.weeklyReport,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+  } catch(e) { console.warn('save failed:', e); }
 }
 
-// ── カレンダー ──
-function renderCal() {
-  const now   = new Date();
-  const year  = S.calYear  ?? now.getFullYear();
-  const month = S.calMonth ?? now.getMonth();
-  const isThisMonth = (year === now.getFullYear() && month === now.getMonth());
-
-  const dayMap = {};
-  S.records.forEach(r => {
-    const d = new Date(r.date);
-    if (d.getFullYear() === year && d.getMonth() === month) {
-      const day = d.getDate();
-      if (!dayMap[day]) dayMap[day] = [];
-      dayMap[day].push(r);
+function persistLoad() {
+  try {
+    // v5→v6 マイグレーション
+    const oldRaw = localStorage.getItem(STORAGE_KEY_OLD);
+    if (oldRaw && !localStorage.getItem(STORAGE_KEY)) {
+      const old = JSON.parse(oldRaw);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(old));
+      localStorage.removeItem(STORAGE_KEY_OLD);
+      console.info('tks: migrated v5→v6');
     }
+
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    Object.assign(S, {
+      onboarded:     saved.onboarded     ?? false,
+      user:          { ...S.user, ...(saved.user || {}) },
+      records:       saved.records       ?? [],
+      streak:        saved.streak        ?? 0,
+      _lastPlayDate: saved._lastPlayDate ?? null,
+      showOpinion:   saved.showOpinion   ?? true,
+      fontSize:      saved.fontSize      ?? 'medium',
+      weeklyReport:  saved.weeklyReport  ?? '',
+    });
+  } catch(e) { console.warn('load failed:', e); }
+}
+
+// ── ヘルパー ──
+const $id = id => document.getElementById(id);
+
+function isSmallKid() { return S.user.ageGroup === 'young'; }
+function opinionMaxChars() {
+  return S.user.ageGroup==='young' ? 60 : S.user.ageGroup==='middle' ? 100 : 150;
+}
+
+function applyFontSize() {
+  document.body.classList.toggle('fs-large', S.fontSize === 'large');
+}
+
+// ── API ──
+async function callAI(messages, system) {
+  const res = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages, system }),
   });
-
-  const firstDay    = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month+1, 0).getDate();
-  const monthName   = `${year}年${month+1}月`;
-  const dows        = ['日','月','火','水','木','金','土'];
-
-  // スタンプに使う絵文字：記録のemojiを使う（なければ🔍）
-  let cells = '';
-  for (let i = 0; i < firstDay; i++) cells += `<div class="cal-day empty"></div>`;
-  for (let d = 1; d <= daysInMonth; d++) {
-    const isToday   = isThisMonth && d === now.getDate();
-    const isStamped = !!dayMap[d];
-    const stamp     = isStamped ? (dayMap[d][0].odai?.emoji || '🔍') : '';
-    const onclick   = isStamped ? `onclick="App.showDayTakara(${year},${month},${d})"` : '';
-    cells += `
-      <div class="cal-day ${isToday?'today':''} ${isStamped?'stamped':''}" ${onclick}>
-        ${isStamped ? `<div class="cal-stamp">${stamp}</div>` : ''}
-        <div style="font-size:${isStamped?'9':'11'}px;opacity:${isStamped?'.5':'1'}">${d}</div>
-      </div>`;
-  }
-
-  return `
-    <div class="content">
-      <div class="cal-header">
-        <button class="cal-nav" onclick="App.calPrev()">‹</button>
-        <div class="cal-month">${monthName}</div>
-        <button class="cal-nav" onclick="App.calNext()">›</button>
-      </div>
-      <div class="cal-grid">
-        ${dows.map((d,i) => `<div class="cal-dow ${i===0?'sun':i===6?'sat':''}">${d}</div>`).join('')}
-        ${cells}
-      </div>
-      <div class="section-ttl">今月の発見 ${Object.keys(dayMap).length}日</div>
-    </div>
-    ${S.dayModal ? renderDayModal() : ''}`;
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'API error');
+  return data.text;
 }
 
-// ⑧ カレンダーを開いたときのお宝バースト演出
-function triggerCalBurst() {
-  const emojis = S.records.map(r => r.odai?.emoji).filter(Boolean);
-  if (emojis.length === 0) return;
-
-  // phone フレームを基準に中央を計算
-  const phone = document.querySelector('.phone');
-  if (!phone) return;
-  const rect = phone.getBoundingClientRect();
-  const cx   = rect.left + rect.width  / 2;
-  const cy   = rect.top  + rect.height / 2;
-
-  // 既存レイヤーがあれば除去
-  document.querySelectorAll('.cal-burst-wrap').forEach(el => el.remove());
-
-  const layer = document.createElement('div');
-  layer.className = 'cal-burst-wrap';
-  document.body.appendChild(layer);
-
-  const count = Math.min(emojis.length, 20);
-  for (let i = 0; i < count; i++) {
-    const el    = document.createElement('div');
-    el.className = 'cal-burst-item';
-    const angle  = (i / count) * Math.PI * 2;
-    const dist   = 90 + Math.random() * 120;
-    const tx     = Math.round(Math.cos(angle) * dist);
-    const ty     = Math.round(Math.sin(angle) * dist);
-    el.style.cssText =
-      `left:${cx}px;top:${cy}px;--tx:${tx}px;--ty:${ty}px;` +
-      `animation-delay:${i * 0.045}s;`;
-    el.textContent = emojis[i % emojis.length];
-    layer.appendChild(el);
-  }
-  setTimeout(() => layer.remove(), 1800);
-}
-
-function renderDayModal() {
-  const m = S.dayModal;
-  const records = S.records.filter(r => {
-    const d = new Date(r.date);
-    return d.getFullYear()===m.year && d.getMonth()===m.month && d.getDate()===m.day;
+async function analyzePhoto(b64, mime) {
+  const res = await fetch('/api/photo', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ b64, mime }),
   });
-  return `
-    <div class="modal-overlay" onclick="App.closeDayModal()">
-      <div class="modal-box" onclick="event.stopPropagation()">
-        <button class="modal-close" onclick="App.closeDayModal()">✕</button>
-        <div class="modal-ttl">${m.month+1}月${m.day}日のたから</div>
-        ${records.map(r => renderTakaraCard(r, false)).join('')}
-      </div>
-    </div>`;
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'API error');
+  return data;
 }
 
-// ── たからばこ ──
-function renderBox() {
-  const recs = S.records.slice().reverse();
-  const lensUsed = [...new Set(S.records.map(r=>r.lens).filter(Boolean))].length;
+// ── プロンプト ──
+function chatSystem() {
+  const u = S.user;
 
-  // レンズ別集計
-  const lensCount = {};
-  LENSES.forEach(l => { lensCount[l.id] = 0; });
-  S.records.forEach(r => { if (r.lens && lensCount[r.lens] !== undefined) lensCount[r.lens]++; });
-  const maxCount = Math.max(1, ...Object.values(lensCount));
-
-  const lensColors = {
-    'ことば': 'var(--coral)', 'かず': 'var(--teal)',
-    'かがく': 'var(--mint)', 'しゃかい': 'var(--amber)',
-    'えいご': 'var(--lavender)', 'じぶん': '#ffd166'
+  // ── 年齢レイヤー ──
+  const agePrompts = {
+    young: `【年齢レイヤー：3〜5さい】
+- 全文ひらがな・カタカナのみ。漢字は使わない
+- 1文は10〜15文字以内。短く、テンポよく
+- 「〜だね！」「〜してみて！」など明るく語りかける
+- 抽象的な概念は使わず、五感（見る・触る・聞く・におい・味）で表現する
+- 否定・訂正をしない。必ず全肯定してから次の問いへ
+- 難しい言葉が出たらすぐやさしい言い換えをする`,
+    middle: `【年齢レイヤー：6〜8さい】
+- ひらがな中心だが、簡単な漢字（小1〜2レベル）は使ってよい
+- 1文は20文字前後。テンポ感を保ちつつ少し情報を増やせる
+- 「なぜだろう？」「どう思う？」と自分の考えを引き出す問いを積極的に使う
+- 豆知識を1つ混ぜるとわくわく感が増す
+- 答えが出なくても「それでいいよ」と安心させる`,
+    older: `【年齢レイヤー：9〜12さい】
+- 漢字・熟語も適切に使用可。ただし難しすぎる単語はふりがな付きで
+- 1文は30文字前後まで可。論理的なつながりを意識した文章
+- 「もし〇〇だったら？」「他にどんな例があるかな？」と仮説・応用を促す
+- 子どもの意見に軽く反論したり別の視点を提示してもよい（思考を深めるため）
+- 「なぜそう思う？」と根拠を言語化させることを重視する`,
   };
 
-  return `
-    <div class="content">
-      <div class="stats-row">
-        <div class="stat-box"><div class="stat-num">${S.records.length}</div><div class="stat-lbl">たから数</div></div>
-        <div class="stat-box"><div class="stat-num">${S.streak}</div><div class="stat-lbl">れんぞく日</div></div>
-        <div class="stat-box"><div class="stat-num">${lensUsed}</div><div class="stat-lbl">レンズ数</div></div>
-      </div>
+  // ── タイプレイヤー ──
+  const typePrompts = {
+    A: `【はっけんタイプ】
+- 口調：ゆっくり、やさしく。「あ、ほんとだ！」「すごい、気づいたね！」を使う
+- 観察を深める問いを中心にする：「色は？」「さわったらどんな感じ？」「においは？」
+- 1つのものをじっくり多角的に観察させる。次のお題へ急がない
+- 発見した事実をそのまま大切にする。「正解・不正解」を意識させない`,
+    B: `【しらべるタイプ】
+- 口調：少し知的でわくわくする感じ。「実はね…」「知ってた？」をよく使う
+- 言葉の由来・豆知識・分類・比較を会話に自然に混ぜる
+- 「正式な名前は〇〇というんだよ」と知識の精度を上げる方向へ誘う
+- 「他にも同じ仲間はいるかな？」と知識を広げる問いを使う
+- 事実確認を楽しむ姿勢を引き出す`,
+    C: `【そうぞうタイプ】
+- 口調：一緒に冒険するような、わくわくした探偵スタイル
+- 見えない部分・中の構造・なぜそうなっているか、を推理させる
+- 「背景はどうなってると思う？」「もしこれがなかったら？」と想像・仮説を引き出す
+- 「もしかして〜かもしれない」という推論を全力で受け止め、さらに深める
+- 答えが合っていなくても「いい仮説だね！」と思考プロセスを褒める`,
+  };
 
-      <!-- レンズ比較 -->
-      ${S.records.length > 0 ? `
-        <div class="section-ttl">レンズべつの発見</div>
-        <div class="lens-compare-grid">
-          ${LENSES.map(l => `
-            <div class="lens-compare-row">
-              <span style="font-size:14px;width:20px">${l.icon}</span>
-              <span style="font-size:10px;font-weight:700;color:var(--deep);width:48px">${esc(l.name)}</span>
-              <div class="lens-compare-bar-wrap">
-                <div class="lens-compare-bar"
-                     style="width:${Math.round(lensCount[l.id]/maxCount*100)}%;background:${lensColors[l.id]||'var(--amber)'}">
-                </div>
-              </div>
-              <span class="lens-compare-count">${lensCount[l.id]}</span>
-            </div>`).join('')}
-        </div>` : ''}
+  // ── レンズレイヤー ──
+  const lensPrompts = {
+    ことば: `【ことばレンズ】
+- 「他の言い方をするとしたら？」と表現の幅を広げる
+- オノマトペ（ふわふわ・ざらざら・ぴかぴかなど）を積極的に使い表現を楽しむ
+- 「この気持ちを1つの言葉で言うと？」と語彙を引き出す
+- 比喩・たとえ話を一緒に作る（「まるで〇〇みたい、というのはどう？」）`,
+    かず: `【かずレンズ】
+- 「いくつある？」「どのくらいの大きさ？」と数量・サイズを意識させる
+- 「〇〇と比べると大きい？小さい？」と比較の視点を引き出す
+- 形・対称性・パターン・規則性に気づかせる問いを混ぜる
+- 「もし10倍の大きさだったら？」と数の感覚を遊びながら広げる`,
+    かがく: `【かがくレンズ】
+- 「なんでそうなってると思う？」と原因・仕組みを引き出す
+- 「触ったらどんな感じ？固い？やわらかい？冷たい？」と物質の性質に気づかせる
+- 「もし雨が降ったらどうなる？」など条件を変えた変化を想像させる
+- 子どもの仮説を「実験したらわかるね！」と次の行動につなげる`,
+    しゃかい: `【しゃかいレンズ】
+- 「これは誰が作ったんだろう？」「どんな人が使うんだろう？」と人の役割に気づかせる
+- 「どこから来たんだろう？」「次にどこへ行くんだろう？」とものの流れを想像させる
+- 「これがなかった昔はどうしてたんだろう？」と歴史・変化の視点を入れる
+- 「みんなのためにあるルールってなんだろう？」と社会のつながりを考えさせる`,
+    えいご: `【えいごレンズ】
+- 3〜5歳の場合はカタカナ読みのみ。アルファベット表記は最小限にする
+- 英語の単語を教えるときは必ずカタカナ読みも添える（例：dog＝ドッグ）
+- 「英語で言うと〇〇（カタカナ）だよ、言ってみて！」と発話を楽しく促す
+- 簡単な英語フレーズ（What is this? / I like 〇〇!）を会話に自然に挟む
+- 英語の語源や面白い語呂合わせがあれば紹介して記憶の助けにする
+- 正確な発音より「言ってみること」を全力で褒める`,
+    じぶん: `【じぶんレンズ】
+- 「好き？嫌い？なんで？」と自分の感情を言語化させることを最優先にする
+- 「前に似たようなこと経験したことある？」と記憶・体験とつなげる
+- 「${u.name||'きみ'}だったらどうする？」と自分ごととして考えさせる
+- 「正解はないよ。きみはどう感じた？それが一番大事」と自己肯定感を育む
+- 親に「${u.parentName}は子どもの頃どうだったと思う？」と橋渡しする`,
+  };
 
-      ${recs.length === 0
-        ? `<div class="empty-msg">📦<br>まだたからがないよ<br>さがしにいこう！</div>`
-        : recs.map(r => renderTakaraCard(r, true)).join('')}
-    </div>`;
+  const base = `あなたは「たからちゃん」です。
+子どもが日常で見つけたものについて、一緒に考える案内役です。
+
+【レイヤー優先順位】
+指示が矛盾する場合は「年齢レイヤー ＞ タイプレイヤー ＞ レンズレイヤー」の順で優先し、年齢に合った言葉・トーンに調整すること。
+
+【登場人物と話しかけのルール】
+この会話には2人が参加している。
+- [${u.name || 'こども'}]：子ども。メインの対話相手。基本的には子どもに向けて問いかける
+- [${u.parentName}]：保護者。ときどき（3〜4往復に1回程度）話しかけてよい
+必ず1人だけに向けて問いかけること。子どもと大人に同時に問いかけない。
+[${u.parentName}]への問いかけは「${u.parentName}はどう思う？」「${u.parentName}は子どもの頃どうだった？」など親子の対話を引き出す内容にする。
+
+【基本ルール】
+- 子どもの答えをまず受け止めてから次の問いへ
+- 1回の返答は2〜3文以内
+- 絵文字を1つだけ使う
+- 「なんとなく」「わからない」も大切に受け取る
+- 答えが出なくても「それでいいよ」と安心させてから別の角度で問いかける
+- 押しつけや説教はしない。答えを先に言わない
+- まとめの提案はしない。対話はおしまいボタンが押されるまで続ける
+- ${u.strengths ? `${u.name||'この子'}の得意なこと（${u.strengths}）を活かせるような問いかけを自然に混ぜる` : '得意なことが登録されたら、それを活かす問いかけをする'}
+
+【好きなものの活用】
+${u.likes ? `「${u.likes}」が好き。対話の中で1回は、お題「${S.odai?.name}」と好きなものを自然に絡めた問いかけをする（例：「${u.likes}と比べてどう？」「${u.likes}みたいなところはある？」）` : '好きなものが登録されたら、お題と絡めた問いかけをする'}
+
+【子どもの情報】
+- 呼び方: ${u.name || 'お子さん'}
+- 好きなもの: ${u.likes || '未登録'}
+- 得意なこと: ${u.strengths || '未登録'}
+
+【今回のお題】「${S.odai?.name}」`;
+
+  return [
+    base,
+    agePrompts[u.ageGroup] || agePrompts.young,
+    typePrompts[u.type] || typePrompts.A,
+    lensPrompts[S.lens] || '',
+  ].join('\n\n');
 }
 
-// ── きろくノートタブ ──
-function renderNote() {
-  const notes = S.records.filter(r => r.note && r.note.trim()).slice().reverse();
-  const allRecs = S.records.slice().reverse();
+function summarySystem() {
+  const conv = S.messages.map(m => {
+    const who = m.role==='ai' ? 'たからちゃん' : m.role==='child' ? S.user.name||'子ども' : S.user.parentName;
+    return `[${who}] ${m.text}`;
+  }).join('\n');
+  const max = opinionMaxChars();
 
-  return `
-    <div class="content">
-      <div style="font-family:'Kaisei Decol',serif;font-size:16px;color:var(--deep);margin-bottom:14px">
-        📓 きろくノート
-      </div>
-      <div style="font-size:11px;color:rgba(45,27,0,0.45);margin-bottom:14px;line-height:1.7">
-        サマリーのあとに書いたメモが<br>ここに集まるよ
-      </div>
-      ${notes.length === 0
-        ? `<div class="empty-msg">📓<br>まだメモがないよ<br>たからさがしのあとに<br>きもちをかいてみよう！</div>`
-        : notes.map(r => `
-          <div class="note-tab-section">
-            <div class="note-entry-header">
-              <span class="note-entry-emoji">${r.odai.emoji}</span>
-              <span class="note-entry-name">${esc(r.odai.name)}</span>
-              <span style="font-size:9px;color:rgba(45,27,0,0.35);margin-left:auto">${fmtDate(r.date)}</span>
-            </div>
-            <div class="note-entry-text">${esc(r.note)}</div>
-          </div>`).join('')}
-    </div>`;
+  return `あなたは「たからちゃん」です。以下の会話をもとにまとめを作ってください。
+
+お題: ${S.odai?.name}　レンズ: ${S.lens}
+
+【会話記録】
+${conv}
+
+【重要】findingsは必ず上記の会話の中で実際に出た言葉・気づき・発見をもとにしてください。
+
+【出力形式】JSONのみ（Markdownなし）:
+{
+  "findings": ["会話に出た発見1（子どもの言葉を活かした短い文）","発見2","発見3"],
+  "opinion": "保護者向けの温かいコメント。${max}文字以内。2〜3段落に分け、段落の区切りは必ず \\n（バックスラッシュn）で表現すること（生の改行は使わない）。押しつけがましくない。${S.user.ageGroup==='young'?'ひらがな多め。':''}"
+}`;
 }
 
-// ── おきにいり ──
-// ⑦ バッジをリスト上部に移動
-function renderFav() {
-  const favs    = S.records.filter(r=>r.bookmarked).slice().reverse();
-  const lensUsed = [...new Set(S.records.map(r=>r.lens).filter(Boolean))].length;
-
-  return `
-    <div class="content">
-      <div style="font-family:'Kaisei Decol',serif;font-size:16px;color:var(--deep);margin-bottom:14px">
-        ⭐ おきにいりのたから
-      </div>
-
-      <!-- ⑦ バッジを上部に -->
-      <div class="badge-section-top">
-        <div class="badge-section-ttl">🏅 かくとくしたバッヂ</div>
-        <div class="badge-grid">
-          <div class="badge ${S.records.length>=1?'badge-on':'badge-off'}">🔍 はじめての発見</div>
-          <div class="badge ${S.records.some(r=>r.lens==='かがく')?'badge-on':'badge-off'}">🔬 かがく探検家</div>
-          <div class="badge ${S.streak>=3?'badge-on':'badge-off'}">📅 3日れんぞく</div>
-          <div class="badge ${S.records.some(r=>r.lens==='じぶん')?'badge-on':'badge-off'}">💛 じぶん探検家</div>
-          <div class="badge ${S.records.length>=10?'badge-on':'badge-off'}">⭐ 10こ発見</div>
-          <div class="badge ${S.records.some(r=>r.lens==='えいご')?'badge-on':'badge-off'}">🌍 えいご探検家</div>
-          <div class="badge ${lensUsed>=6?'badge-on':'badge-off'}">🌈 レンズマスター</div>
-        </div>
-      </div>
-
-      ${favs.length === 0
-        ? `<div class="empty-msg">⭐<br>おきにいりがまだないよ<br>🔖を押してみよう！</div>`
-        : favs.map(r => renderTakaraCard(r, true)).join('')}
-    </div>`;
-}
-
-// ── たからカード（共通） ──
-// ⑥ レンズタグをアイコン・名前の横（右端）に表示。しおりボタンと重ならないよう meta にまとめる。
-function renderTakaraCard(r, showFavBtn) {
-  const lens   = LENSES.find(l=>l.id===r.lens);
-  const colors = ['#e8860a','#0a9396','#e76f51','#52b788','#9b89c4','#ffd166'];
-  const idx    = S.records.lastIndexOf(r);
-  return `
-    <div class="takara-item">
-      <div class="takara-item-header">
-        <span class="takara-item-emoji">${r.odai.emoji}</span>
-        <span class="takara-item-name">${esc(r.odai.name)}</span>
-        ${lens ? `
-          <div class="takara-item-meta${showFavBtn ? ' takara-item-meta--fav' : ''}">
-            <span class="takara-item-lens">${lens.icon} ${esc(lens.name)}</span>
-          </div>` : (showFavBtn ? '<div class="takara-item-meta takara-item-meta--fav"></div>' : '')}
-      </div>
-      <div class="takara-findings">
-        ${(r.findings||[]).map((f,i)=>`
-          <div class="takara-finding">
-            <div class="finding-dot" style="background:${colors[i%colors.length]};width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:4px"></div>
-            ${esc(f)}
-          </div>`).join('')}
-      </div>
-      ${r.note ? `<div class="takara-note">📓 ${esc(r.note)}</div>` : ''}
-      <div class="takara-item-date">${fmtDate(r.date)}</div>
-      ${showFavBtn ? `
-        <button class="takara-fav-btn ${r.bookmarked?'active':''}"
-                onclick="App.toggleRecordFav(${idx})">🔖</button>` : ''}
-    </div>`;
-}
-
-// ── せってい ──
-function renderSettings() {
+function weeklyReportSystem() {
   const u = S.user;
-  const fs = S.fontSize || 'medium';
-  return `
-    <div class="content">
-      <div class="settings-section">
-        <div class="settings-ttl">こどもの情報</div>
-        <div class="settings-field">
-          <div class="settings-field-label">呼び方</div>
-          <input class="form-input" id="s-name" value="${esc(u.name)}" placeholder="ニックネーム">
-          <div class="form-error" id="s-name-err">なまえをいれてください</div>
-        </div>
-        <div class="settings-field">
-          <div class="settings-field-label">ねんれい</div>
-          <div class="age-grid">${renderAgeCards(u.ageGroup)}</div>
-        </div>
-        <div class="settings-field">
-          <div class="settings-field-label">まなびのタイプ</div>
-          <div class="type-grid">${renderTypeCards(u.type)}</div>
-        </div>
-        <div class="settings-field">
-          <div class="settings-field-label">すきなもの</div>
-          <input class="form-input" id="s-likes" value="${esc(u.likes)}" placeholder="ポケモン・サッカーなど">
-        </div>
-        <div class="settings-field">
-          <div class="settings-field-label">とくいなこと</div>
-          <input class="form-input" id="s-str" value="${esc(u.strengths)}">
-        </div>
-      </div>
-      <div class="settings-section">
-        <div class="settings-ttl">いっしょにするひと</div>
-        <div class="settings-field">
-          <div class="settings-field-label">よびかた</div>
-          <div class="parent-chips">${renderParentChips(u.parentName)}</div>
-        </div>
-      </div>
-      <div class="settings-section">
-        <div class="settings-ttl">表示設定</div>
-        <div class="toggle-row">
-          <div class="toggle-label">💡 AIのかんがえ を表示する</div>
-          <div class="toggle-sw ${S.showOpinion?'on':''}" onclick="App.toggleShowOpinion()">
-            <div class="toggle-knob"></div>
-          </div>
-        </div>
-        <div class="settings-field">
-          <div class="settings-field-label">文字サイズ（全体）</div>
-          <div class="font-size-chips">
-            <div class="font-size-chip ${fs==='medium'?'sel':''}" onclick="App.setFontSize('medium')">中（ふつう）</div>
-            <div class="font-size-chip ${fs==='large'?'sel':''}" onclick="App.setFontSize('large')">大（おおきく）</div>
-          </div>
-        </div>
-      </div>
+  const oneWeekAgo = Date.now() - 7 * 86400000;
+  const weekRecs = S.records.filter(r => new Date(r.date).getTime() > oneWeekAgo);
+  if (weekRecs.length === 0) return null;
 
-      <!-- ウィークリーレポート -->
-      <div class="settings-section">
-        <div class="settings-ttl">ウィークリーレポート</div>
-        <div style="font-size:11px;color:rgba(45,27,0,0.45);margin-bottom:10px;line-height:1.6">
-          今週の学びをAIがまとめるよ（${u.parentName}向け）
-        </div>
-        ${S.weeklyReport ? `
-          <div class="report-card">
-            <div class="report-label">📊 ウィークリーレポート</div>
-            <div class="report-body">${aiText(S.weeklyReport)}</div>
-          </div>
-          <button class="btn-secondary" onclick="App.generateReport()">
-            ${S.reportLoading ? '<span class="spinner"></span>' : '🔄 もう一度生成'}
-          </button>` : `
-          <button class="btn-primary" onclick="App.generateReport()">
-            ${S.reportLoading ? '<span class="spinner"></span> せいせいちゅう…' : '📊 レポートをつくる'}
-          </button>`}
-      </div>
+  const summary = weekRecs.map(r =>
+    `【${r.lens}レンズ】${r.odai.name}：${(r.findings||[]).join('、')}`
+  ).join('\n');
 
-      <!-- データ管理 -->
-      <div class="settings-section">
-        <div class="settings-ttl">データ管理</div>
-        <div style="font-size:var(--fs-xs);color:rgba(45,27,0,0.45);margin-bottom:10px;line-height:1.7">
-          きろくをCSVでかんりできるよ
-        </div>
-        <div style="display:flex;gap:8px;margin-bottom:8px">
-          <button class="btn-secondary" style="flex:1;padding:9px;font-size:var(--fs-sm)"
-                  onclick="App.exportCSV()">📤 エクスポート</button>
-          <button class="btn-secondary" style="flex:1;padding:9px;font-size:var(--fs-sm)"
-                  onclick="App.triggerImport()">📥 インポート</button>
-        </div>
-        <input type="file" id="csv-import-input" accept=".csv"
-               style="display:none" onchange="App.importCSV(event)">
-        <div style="font-size:var(--fs-xs);color:rgba(45,27,0,0.35);line-height:1.6">
-          ※インポートすると既存データに追加されます
-        </div>
-      </div>
+  return `あなたは子どもの学びを見守るアドバイザーです。
+以下は${u.name}さん（${AGE_GROUPS.find(a=>a.id===u.ageGroup)?.label||''}）の今週（7日間）のたからさがしの記録です。
 
-      <!-- 意見・要望 -->
-      <div class="settings-section">
-        <div class="settings-ttl">意見・要望をおくる</div>
-        <div style="font-size:var(--fs-xs);color:rgba(45,27,0,0.45);margin-bottom:10px;line-height:1.7">
-          きづいたこと・ほしい機能・バグほうこくなど、なんでも！
-        </div>
-        <textarea id="feedback-text" rows="3"
-          style="width:100%;border:2px solid rgba(45,27,0,0.1);border-radius:10px;
-                 padding:9px 12px;font-family:'Zen Maru Gothic',sans-serif;
-                 font-size:var(--fs-sm);color:var(--deep);outline:none;
-                 background:var(--paper2);resize:none;margin-bottom:8px;line-height:1.7"
-          placeholder="ここにかいてね…"></textarea>
-        <button class="btn-primary" style="margin-bottom:0"
-                onclick="App.sendFeedback()">📨 おくる</button>
-      </div>
+${summary}
 
-      <button class="btn-primary" onclick="App.saveSettings()">ほぞんする ✓</button>
-    </div>`;
+${u.parentName}向けに、以下を含む200字程度のレポートをJSONで返してください。
+文体は丁寧で温かみのある日本語とし、専門用語は使わないこと。
+JSONのみ（Markdownなし）:
+{
+  "highlight": "今週いちばん印象的だった気づきや成長（1〜2文）",
+  "growth": "子どもがどんな力を伸ばしているか（1〜2文）",
+  "next": "来週試してみると良いこと・声かけのヒント（1〜2文）"
+}`;
 }
 
-// fmtDate / pickRand は tks-logic.js で定義（ODAI_ALL への依存のため）
+// ── Render ──
+function render() {
+  const root = $id('screen-root');
+  const tw   = $id('tabs-wrap');
 
-/* ═══════════════════════════════════════════════════════════
-   tks-style.css に追記が必要な差分CSS（v6対応）
-   ═══════════════════════════════════════════════════════════
-
-  // ① ホーム ストリークヒーロー
-  .hero-streak {
-    background: linear-gradient(135deg, var(--amber), var(--coral-light));
-    border-radius: 20px; padding: 14px 16px 12px; margin-bottom: 14px;
-    position: relative; overflow: hidden;
-    box-shadow: 0 6px 20px rgba(232,134,10,0.28);
-  }
-  .hero-streak::before { content:'🔥'; position:absolute; right:-8px; bottom:-10px; font-size:72px; opacity:.12; }
-  .hero-streak-top  { display:flex; align-items:center; justify-content:space-between; }
-  .hero-streak-label{ font-size:9px; color:rgba(255,255,255,0.75); letter-spacing:.18em; }
-  .hero-streak-num  { font-family:'Kaisei Decol',serif; font-size:38px; color:white; line-height:1; }
-  .hero-streak-unit { font-size:11px; color:rgba(255,255,255,0.8); }
-  .hero-streak-msg  { font-size:10px; color:rgba(255,255,255,0.85); margin-top:6px; line-height:1.5; }
-
-  // ② チャット プログレスバー＋ヒントバブル
-  .chat-progress-wrap  { padding:8px 14px 0; flex-shrink:0; background:var(--paper); }
-  .chat-progress-row   { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
-  .chat-progress-label { font-size:9px; color:rgba(45,27,0,0.45); letter-spacing:.1em; }
-  .chat-progress-count { font-size:9px; color:var(--amber); font-weight:700; }
-  .chat-progress-bar   { height:5px; background:rgba(232,134,10,0.12); border-radius:10px; overflow:hidden; margin-bottom:8px; }
-  .chat-progress-fill  { height:100%; background:linear-gradient(90deg,var(--amber),var(--coral-light)); border-radius:10px; transition:width .6s ease; }
-  .hint-bubble {
-    margin:0 14px 8px; padding:8px 12px;
-    background:rgba(255,209,102,0.15); border:1.5px solid rgba(232,134,10,0.2);
-    border-radius:14px; display:flex; align-items:flex-start; gap:8px;
-    animation:hint-pop .4s cubic-bezier(.34,1.56,.64,1);
-  }
-  @keyframes hint-pop { 0%{transform:scale(0.9);opacity:0;} 100%{transform:scale(1);opacity:1;} }
-  .hint-icon { font-size:15px; flex-shrink:0; }
-  .hint-text { font-size:10px; color:var(--deep); line-height:1.65; }
-  .hint-text strong { color:var(--amber); font-weight:700; }
-
-  // ③ サマリー finding アニメーション
-  .finding-item-anim {
-    opacity:0; transform:translateY(10px);
-  }
-  .finding-item-visible {
-    animation:finding-in .5s cubic-bezier(.34,1.28,.64,1) forwards;
-  }
-  @keyframes finding-in {
-    0%  { opacity:0; transform:translateY(10px); }
-    100%{ opacity:1; transform:translateY(0); }
+  if (!S.onboarded) {
+    tw.style.display  = 'none';
+    root.innerHTML    = renderOnboard();
+    bindEvents();
+    return;
   }
 
-  // ④ サマリー保存ボタン
-  .summary-save-btn {
-    display:flex; align-items:center; justify-content:center; gap:7px;
-    width:100%; padding:10px; margin-bottom:10px;
-    background:white; color:var(--teal);
-    border:2px solid rgba(10,147,150,0.25); border-radius:14px;
-    font-family:'Zen Maru Gothic',sans-serif; font-size:12px; font-weight:700;
-    cursor:pointer; transition:all .15s;
+  const inFlow = ['lens','chat','summary'].includes(S.flow);
+  if (inFlow) {
+    tw.style.display = 'none';
+    let content = '';
+    if (S.flow==='lens')    content = renderLens();
+    if (S.flow==='chat')    content = renderChat();
+    if (S.flow==='summary') content = renderSummary();
+    root.innerHTML = renderChatHeader() + content;
+  } else {
+    tw.style.display = 'block';
+    tw.innerHTML     = renderTabs();
+    const map = {
+      home: renderHome,
+      cal:  renderCal,
+      box:  renderBox,
+      note: renderNote,
+      fav:  renderFav,
+      set:  renderSettings,
+    };
+    root.innerHTML = (map[S.tab]||renderHome)();
   }
-  .summary-save-btn:active { background:rgba(10,147,150,0.06); transform:translateY(1px); }
+  bindEvents();
+}
 
-  // ⑤ back-btn（旧 chat-close-btn を置き換え）
-  .back-btn {
-    display:flex; align-items:center; gap:4px;
-    font-size:11px; color:var(--teal);
-    background:rgba(10,147,150,0.08); border:none; border-radius:20px;
-    padding:5px 11px; cursor:pointer; flex-shrink:0;
-    font-family:'Zen Maru Gothic',sans-serif; font-weight:700;
-    transition:background .15s;
+// ── イベントバインド ──
+function bindEvents() {
+  const ci = $id('chat-in');
+  if (ci) ci.addEventListener('keydown', e => { if(e.key==='Enter') App.sendChat(); });
+
+  const fi = $id('free-in');
+  if (fi) fi.addEventListener('keydown', e => { if(e.key==='Enter') App.submitFree(); });
+
+  const fg = $id('free-go-btn');
+  if (fg) fg.addEventListener('click', () => App.submitFree());
+
+  const rr = $id('reroll-btn');
+  if (rr) rr.addEventListener('click', e => {
+    e.stopPropagation();
+    S.odaiGenerating = true;
+    render();
+    App._generateAiOdai();
+  });
+
+  const rc = $id('rand-card');
+  if (rc) rc.addEventListener('click', () => App.goToLens(S.randOdai));
+
+  const pi = $id('photo-input');
+  if (pi) {
+    pi.addEventListener('change', async e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async ev => {
+        const b64 = ev.target.result.split(',')[1];
+        const safeType = /^image\/(jpeg|png|gif|webp)$/.test(file.type) ? file.type : 'image/jpeg';
+        const loadingDiv = document.createElement('div');
+        loadingDiv.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:32px';
+        const img = document.createElement('img');
+        img.src = `data:${safeType};base64,${b64}`;
+        img.style.cssText = 'width:100%;max-height:200px;object-fit:cover;border-radius:16px';
+        const sp = document.createElement('div'); sp.className = 'spinner';
+        const tx = document.createElement('div');
+        tx.style.cssText = 'font-size:13px;color:rgba(45,27,0,0.5)';
+        tx.textContent = 'しゃしんをよんでいるよ…';
+        loadingDiv.append(img, sp, tx);
+        root.innerHTML = '';
+        root.appendChild(loadingDiv);
+        try {
+          const result = await analyzePhoto(b64, file.type);
+          App.goToLens(result);
+        } catch(err) {
+          console.error('photo error:', err);
+          root.innerHTML = `
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:32px;text-align:center">
+              <div style="font-size:36px">📷</div>
+              <div style="font-size:13px;color:rgba(45,27,0,0.5)">よみとりに失敗したよ<br>もう一度ためしてみてね</div>
+              <button class="btn-secondary" onclick="App.closeChatFlow()" style="width:auto;padding:8px 20px">もどる</button>
+            </div>`;
+        }
+      };
+      reader.readAsDataURL(file);
+    });
   }
-  .back-btn:active { background:rgba(10,147,150,0.15); }
 
-  // ⑥ たからカード レンズ位置修正
-  .takara-item-meta {
-    display:flex; align-items:center; gap:5px;
-  }
-  .takara-item-meta--fav {
-    margin-right:26px;  // しおりボタン（18px）＋余白
-  }
+  // スクリーンrootは bindEvents 内で使う
+  const root = $id('screen-root');
+}
 
-  // ⑦ おきにいり バッジ上部セクション
-  .badge-section-top {
-    background:white; border-radius:14px; padding:11px 12px;
-    margin-bottom:12px; border:1.5px solid rgba(45,27,0,0.06);
-  }
-  .badge-section-ttl {
-    font-size:9px; letter-spacing:.2em; color:rgba(45,27,0,0.35); margin-bottom:9px;
-  }
+function scrollChat() {
+  setTimeout(() => {
+    const el = $id('chat-area');
+    if (el) el.scrollTop = el.scrollHeight;
+  }, 80);
+}
 
-   ※ カレンダー .cal-streak は不要になったので削除可（ヒーロー移動のため）
+function burstCalAnimation() {
+  const lensCount = {};
+  S.records.forEach(r => { if (r.lens) lensCount[r.lens] = (lensCount[r.lens]||0) + 1; });
+  const items = [];
+  LENSES.forEach(l => { for(let i=0;i<(lensCount[l.id]||0);i++) items.push(l.icon); });
+  if (items.length === 0) return;
 
-   ═══════════════════════════════════════════════════════════
-   tks-logic.js（または App オブジェクト）に追記が必要な差分JS
-   ═══════════════════════════════════════════════════════════
+  const wrap = document.createElement('div');
+  wrap.className = 'cal-burst-wrap';
+  document.body.appendChild(wrap);
+  const cx = window.innerWidth/2, cy = window.innerHeight/2;
+  items.forEach((icon, i) => {
+    const el = document.createElement('div');
+    el.className = 'cal-burst-item';
+    el.textContent = icon;
+    const angle = (i/items.length)*360, dist = 80+Math.random()*80;
+    const rad = angle*Math.PI/180;
+    el.style.left = cx+'px'; el.style.top = cy+'px';
+    el.style.setProperty('--tx', Math.cos(rad)*dist+'px');
+    el.style.setProperty('--ty', Math.sin(rad)*dist+'px');
+    el.style.animationDelay = (i*.05)+'s';
+    wrap.appendChild(el);
+  });
+  setTimeout(() => wrap.remove(), 2000);
+}
 
-  // ⑧ カレンダータブ切り替え時にバースト
-  // App.switchTab の case 'cal' に追記:
-  //   setTimeout(triggerCalBurst, 120);
+// ── App ──
+const App = {
 
-  // ③ サマリー render 後にアニメーション起動
-  // render() 内で S.screen === 'summary' の直後:
-  //   if (S.screen === 'summary') setTimeout(triggerFindingAnim, 50);
+ switchTab(tab) {
+  const prev = S.tab;
+  S.tab  = tab;
+  S.flow = 'home';
+  render();
+  if (tab === 'cal' && prev !== 'cal') setTimeout(triggerCalBurst, 100);
+},
 
-  // ④ 画像保存（html2canvas 使用）
-  // <head> に追加:
-  //   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  //
-  // App に追加:
-  //   saveSummaryImage: async function() {
-  //     const el = document.getElementById('summary-capture-area');
-  //     if (!el) return;
-  //     const canvas = await html2canvas(el, { backgroundColor:'#fdf6e3', scale:2 });
-  //     const a = document.createElement('a');
-  //     a.download = 'たからもの_' + (S.odai?.name || 'きろく') + '.png';
-  //     a.href = canvas.toDataURL('image/png');
-  //     a.click();
-  //   },
-   ═══════════════════════════════════════════════════════════ */
+  closeChatFlow() { S.flow='home'; S.tab='home'; render(); },
+
+  // ── オンボーディング ──
+  obNext() {
+    if (S.step === 0) {
+      const name = $id('ob-name')?.value?.trim();
+      if (!name) {
+        $id('ob-name-err')?.classList.add('show');
+        $id('ob-name')?.classList.add('error');
+        return;
+      }
+      S.user.name = name;
+    } else if (S.step === 1) {
+      // タイプ選択（クリックで即反映済み、値チェックのみ）
+    } else if (S.step === 2) {
+      S.user.likes     = $id('ob-likes')?.value?.trim() || '';
+      S.user.strengths = $id('ob-str')?.value?.trim()   || '';
+    } else {
+      S.onboarded = true; S.tab='home'; S.flow='home';
+      persistSave(); render(); return;
+    }
+    S.step++;
+    render();
+  },
+  obBack() { if(S.step>0){ S.step--; render(); } },
+  setType(t)   { S.user.type=t; render(); },
+  setAge(a)    { S.user.ageGroup=a; persistSave(); render(); },
+  setParent(p) { S.user.parentName=p; render(); },
+
+  // ── AI お題生成 ──
+  async _generateAiOdai() {
+    try {
+      const res = await callAI(
+        [{ role:'user', content:'日本の子ども（3〜9歳）が日常生活で目にしそうな具体的なものを1つ提案してください。JSONのみ: {"name":"ひらがな短い単語","emoji":"絵文字1つ","label":"カテゴリ"}' }],
+        'JSONのみ返してください（Markdownなし）。具体的な身近なものを。'
+      );
+      const parsed = JSON.parse(res.replace(/```json|```/g,'').trim());
+      S.randOdai = parsed;
+    } catch {
+      S.randOdai = pickRand();
+    }
+    S.odaiGenerating = false;
+    render();
+  },
+
+  // ── お題→レンズへ ──
+  goToLens(o) {
+    S.odai=o; S.lens=null; S.flow='lens';
+    S._savedThisSession=false; render();
+  },
+  replayOdai(o) { App.goToLens(o); },
+
+  async submitFree() {
+    const txt = $id('free-in')?.value?.trim();
+    if (!txt) return;
+    try {
+      const res = await callAI(
+        [{ role:'user', content:`子どもが「${txt}」と言いました。JSONのみ: {"name":"ひらがな短い単語","emoji":"絵文字","label":"カテゴリ"}` }],
+        'JSONのみ返してください（Markdownなし）。'
+      );
+      App.goToLens(JSON.parse(res.replace(/```json|```/g,'').trim()));
+    } catch {
+      App.goToLens({ emoji:'✨', name:txt.slice(0,10), label:'きになること' });
+    }
+  },
+
+  selectLens(id) { S.lens = S.lens===id ? null : id; render(); },
+
+  // ── チャット開始 ──
+  async startChat() {
+    if (!S.lens) return;
+    S.messages=[]; S.flow='chat'; S.isLoading=true; S.lastError=false;
+    render();
+    try {
+      const text = await callAI(
+        [{ role:'user', content:'最初の問いかけを1つだけ。' }],
+        chatSystem()
+      );
+      S.messages.push({ role:'ai', text });
+    } catch(err) {
+      console.error('chat start error:', err);
+      S.messages.push({ role:'ai', text:`${S.odai?.name}について、どんなことを知ってる？🔍` });
+    }
+    S.isLoading=false; render(); scrollChat();
+  },
+
+  setSpeaker(sp) { S.speaker=sp; render(); },
+
+  // ── メッセージ送信 ──
+  async sendChat() {
+    const inp = $id('chat-in');
+    const txt = inp?.value?.trim();
+    if (!txt || S.isLoading) return;
+
+    S.messages.push({ role:S.speaker, text:txt });
+    S.isLoading=true; S.lastError=false;
+    render(); scrollChat();
+
+    const payload = App._buildApiMsgs();
+    S.lastSendPayload = payload; // リトライ用に保存
+
+    try {
+      const text = await callAI(payload, chatSystem());
+      S.messages.push({ role:'ai', text });
+      S.lastError = false;
+    } catch(err) {
+      console.error('chat error:', err);
+      S.lastError = true;
+      // 最後のユーザーメッセージは残す（リトライで再送）
+    }
+    S.isLoading=false; render(); scrollChat();
+  },
+
+  async retryLastSend() {
+    if (!S.lastSendPayload || S.isLoading) return;
+    S.isLoading=true; S.lastError=false; render(); scrollChat();
+    try {
+      const text = await callAI(S.lastSendPayload, chatSystem());
+      S.messages.push({ role:'ai', text });
+      S.lastError=false;
+    } catch(err) {
+      S.lastError=true;
+    }
+    S.isLoading=false; render(); scrollChat();
+  },
+
+  _buildApiMsgs() {
+    const apiMsgs = [];
+    for (const m of S.messages) {
+      if (m.role==='ai') {
+        apiMsgs.push({ role:'assistant', content:m.text });
+      } else {
+        const label = m.role==='child' ? S.user.name||'こども' : S.user.parentName;
+        apiMsgs.push({ role:'user', content:`[${label}] ${m.text}` });
+      }
+    }
+    if (apiMsgs[0]?.role==='assistant') {
+      apiMsgs.unshift({ role:'user', content:'はじめてください' });
+    }
+    return apiMsgs;
+  },
+
+  // ── サマリー生成 ──
+  async goSummary() {
+    S.flow='summary'; S.summaryItems=[]; S.summaryOpinion='';
+    S.opinionOpen=false; S.bookmarked=false; S.currentNote='';
+    render();
+
+    try {
+      const res  = await callAI(
+        [{ role:'user', content:'まとめてください。' }],
+        summarySystem()
+      );
+      const data = JSON.parse(res.replace(/```json|```/g,'').trim());
+      S.summaryItems   = data.findings || [];
+      S.summaryOpinion = data.opinion  || '';
+    } catch(err) {
+      console.error('summary error:', err);
+      S.summaryItems   = ['いっぱい考えた！','気になることが見つかった'];
+      S.summaryOpinion = 'ふたりとも、すごい発見だったね！';
+    }
+
+    App._saveRecord();
+    persistSave();
+    render();
+    setTimeout(triggerFindingAnim, 50);
+  },
+
+  // きろくノート保存
+  saveNote() {
+    const txt = $id('note-input')?.value?.trim() || '';
+    S.currentNote = txt;
+    const last = S.records[S.records.length-1];
+    if (last) last.note = txt;
+    persistSave();
+    // 保存フィードバック
+    const btn = document.querySelector('.note-save-btn');
+    if (btn) { btn.textContent='✓ ほぞんしたよ！'; setTimeout(()=>{ btn.textContent='💾 ほぞんする'; },1500); }
+  },
+
+  _saveRecord() {
+    if (S._savedThisSession) return;
+    S._savedThisSession = true;
+    const entry = {
+      odai:       { ...S.odai },
+      lens:       S.lens,
+      date:       new Date().toISOString(),
+      findings:   [...S.summaryItems],
+      bookmarked: false,
+      note:       '',
+    };
+    S.records.push(entry);
+    const today     = new Date().toDateString();
+    const yesterday = new Date(Date.now()-86400000).toDateString();
+    if (S._lastPlayDate !== today) {
+      S.streak       = S._lastPlayDate===yesterday ? S.streak+1 : 1;
+      S._lastPlayDate = today;
+    }
+  },
+
+  doAgain() {
+    S.lens=null; S.flow='lens'; S._savedThisSession=false; render();
+  },
+
+  nextOdai() {
+    S.flow='home'; S.tab='home'; S.randOdai=null; render();
+  },
+
+  toggleBookmark() {
+    S.bookmarked = !S.bookmarked;
+    const last = S.records[S.records.length-1];
+    if (last) last.bookmarked = S.bookmarked;
+    persistSave();
+    render();
+  },
+
+  toggleRecordFav(idx) {
+    if (S.records[idx]) {
+      S.records[idx].bookmarked = !S.records[idx].bookmarked;
+      persistSave();
+      render();
+    }
+  },
+
+  showDayTakara(year, month, day) { S.dayModal={year,month,day}; render(); },
+  closeDayModal() { S.dayModal=null; render(); },
+
+  calPrev() {
+    const now=new Date();
+    let y=S.calYear??now.getFullYear(), m=S.calMonth??now.getMonth();
+    if(--m<0){m=11;y--;} S.calYear=y; S.calMonth=m; render();
+  },
+  calNext() {
+    const now=new Date();
+    let y=S.calYear??now.getFullYear(), m=S.calMonth??now.getMonth();
+    if(++m>11){m=0;y++;} S.calYear=y; S.calMonth=m; render();
+  },
+
+  toggleOpinion()     { S.opinionOpen=!S.opinionOpen; render(); },
+  toggleShowOpinion() { S.showOpinion=!S.showOpinion; persistSave(); render(); },
+
+  setFontSize(size) {
+    S.fontSize = size;
+    applyFontSize();
+    persistSave();
+    render();
+  },
+
+  // ウィークリーレポート生成
+  async generateReport() {
+    const sys = weeklyReportSystem();
+    if (!sys) {
+      alert('今週のきろくがまだないよ！たからさがしをしてからためしてね🔍');
+      return;
+    }
+    S.reportLoading=true; render();
+    try {
+      const res  = await callAI([{ role:'user', content:'レポートをつくってください。' }], sys);
+      const data = JSON.parse(res.replace(/```json|```/g,'').trim());
+      S.weeklyReport = `✨ ハイライト\n${data.highlight}\n\n📈 のびている力\n${data.growth}\n\n💡 来週のヒント\n${data.next}`;
+    } catch(err) {
+      console.error('report error:', err);
+      S.weeklyReport = '生成に失敗しました。もう一度試してみてください。';
+    }
+    S.reportLoading=false;
+    persistSave();
+    render();
+  },
+
+  saveSettings() {
+    const name = $id('s-name')?.value?.trim();
+    if (!name) {
+      $id('s-name-err')?.classList.add('show');
+      $id('s-name')?.classList.add('error');
+      return;
+    }
+    S.user.name      = name;
+    S.user.likes     = $id('s-likes')?.value?.trim() || '';
+    S.user.strengths = $id('s-str')?.value?.trim()   || '';
+    // ageGroupはsetAge()で都度保存されるが念のため同期
+    persistSave();
+    App.switchTab('home');
+  },
+
+  // ── CSV エクスポート ──
+  exportCSV() {
+    if (S.records.length === 0) {
+      alert('まだきろくがないよ！たからさがしをしてからためしてね🔍');
+      return;
+    }
+    const header = ['日付','お題','絵文字','カテゴリ','レンズ','発見1','発見2','発見3','ノート','お気に入り'];
+    const rows = S.records.map(r => [
+      r.date ? new Date(r.date).toLocaleDateString('ja-JP') : '',
+      r.odai?.name   || '',
+      r.odai?.emoji  || '',
+      r.odai?.label  || '',
+      r.lens         || '',
+      r.findings?.[0] || '',
+      r.findings?.[1] || '',
+      r.findings?.[2] || '',
+      r.note         || '',
+      r.bookmarked   ? '★' : '',
+    ]);
+    const csvContent = [header, ...rows]
+      .map(row => row.map(v => `"${String(v).replace(/"/g,'""')}"`).join(','))
+      .join('\n');
+    const bom  = '﻿'; // Excel用BOM
+    const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `takarasagashi_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
+
+  // ── CSV インポート ──
+  triggerImport() {
+    $id('csv-import-input')?.click();
+  },
+
+  importCSV(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const text  = e.target.result.replace(/^﻿/, ''); // BOM除去
+        const lines = text.split(/\r?\n/).filter(Boolean);
+        if (lines.length < 2) throw new Error('データがないよ');
+
+        let imported = 0;
+        for (let i = 1; i < lines.length; i++) {
+          const cols = lines[i].split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/)
+                               .map(c => c.replace(/^"|"$/g,'').replace(/""/g,'"'));
+          if (cols.length < 5) continue;
+          const [dateStr, name, emoji, label, lens, f1, f2, f3, note, fav] = cols;
+          const findings = [f1,f2,f3].filter(Boolean);
+          // 重複チェック（同日同お題は除外）
+          const alreadyExists = S.records.some(r =>
+            r.odai?.name === name &&
+            r.date && new Date(r.date).toLocaleDateString('ja-JP') === dateStr
+          );
+          if (!alreadyExists) {
+            S.records.push({
+              odai:       { name, emoji, label },
+              lens:       lens || '',
+              date:       dateStr ? new Date(dateStr).toISOString() : new Date().toISOString(),
+              findings,
+              note:       note || '',
+              bookmarked: fav === '★',
+            });
+            imported++;
+          }
+        }
+        persistSave();
+        alert(`${imported}件のきろくをインポートしたよ！`);
+        render();
+      } catch(err) {
+        console.error('import error:', err);
+        alert('インポートに失敗したよ。CSVファイルをたしかめてね。');
+      }
+      // inputをリセット（同じファイルを再度選べるように）
+      event.target.value = '';
+    };
+    reader.readAsText(file, 'UTF-8');
+  },
+
+  // ── フィードバック送信（Google フォーム） ──
+  sendFeedback() {
+    const txt = $id('feedback-text')?.value?.trim();
+    if (!txt) {
+      alert('メッセージをにゅうりょくしてね！');
+      return;
+    }
+    // Google フォームのプリフィル URL（entry.XXXXXXXXX はフォームのフィールドID）
+    const FORM_URL = 'https://forms.gle/XEVhBG2636FCohLw9';
+    // フォームを新しいタブで開く
+    window.open(FORM_URL, '_blank', 'noopener,noreferrer');
+    // テキストをクリップボードにコピー（フォームに貼り付けやすくする）
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(txt).then(() => {
+        const btn = document.querySelector('#feedback-text');
+        if (btn) btn.value = '';
+        alert('フォームをひらいたよ！\nクリップボードにコピーしたので、フォームに貼り付けてね 📋');
+      }).catch(() => {
+        alert('フォームをひらいたよ！\nないようをコピーして貼り付けてね 📋');
+      });
+    } else {
+      alert('フォームをひらいたよ！\nないようをコピーして貼り付けてね 📋');
+    }
+  },
+
+  // ── PWA アップデート適用 ──
+  applyUpdate() {
+    if (App._waitingSW) {
+      App._waitingSW.postMessage('skipWaiting');
+    } else {
+      window.location.reload();
+    }
+  },
+  _waitingSW: null,
+};
+
+// ── Service Worker 登録 ──
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', async () => {
+    try {
+      const reg = await navigator.serviceWorker.register('/sw.js');
+
+      // アップデート検知
+      reg.addEventListener('updatefound', () => {
+        const newSW = reg.installing;
+        newSW.addEventListener('statechange', () => {
+          if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+            App._waitingSW = newSW;
+            const banner = document.getElementById('update-banner');
+            if (banner) banner.style.display = 'flex';
+          }
+        });
+      });
+
+      // SW切り替わり時にリロード
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        window.location.reload();
+      });
+
+    } catch(err) {
+      console.warn('SW registration failed:', err);
+    }
+  });
+}
+
+// ── 起動 ──
+persistLoad();
+applyFontSize();
+render();
