@@ -554,13 +554,13 @@ function burstCalAnimation() {
 // ── App ──
 const App = {
 
-  switchTab(tab) {
-    const prev = S.tab;
-    S.tab  = tab;
-    S.flow = 'home';
-    render();
-    if (tab === 'cal' && prev !== 'cal') setTimeout(burstCalAnimation, 100);
-  },
+ switchTab(tab) {
+  const prev = S.tab;
+  S.tab  = tab;
+  S.flow = 'home';
+  render();
+  if (tab === 'cal' && prev !== 'cal') setTimeout(triggerCalBurst, 100);
+},
 
   closeChatFlow() { S.flow='home'; S.tab='home'; render(); },
 
