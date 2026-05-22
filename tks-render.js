@@ -499,12 +499,11 @@ function triggerCalBurst() {
   const emojis = S.records.map(r => r.odai?.emoji).filter(Boolean);
   if (emojis.length === 0) return;
 
-  // phone フレームを基準に中央を計算
-  const phone = document.querySelector('.phone');
-  if (!phone) return;
-  const rect = phone.getBoundingClientRect();
-  const cx   = rect.left + rect.width  / 2;
-  const cy   = rect.top  + rect.height / 2;
+  // アプリ領域を基準に中央を計算
+  const frame = document.getElementById('app') || document.body;
+  const rect  = frame.getBoundingClientRect();
+  const cx    = rect.left + rect.width  / 2;
+  const cy    = rect.top  + rect.height / 2;
 
   // 既存レイヤーがあれば除去
   document.querySelectorAll('.cal-burst-wrap').forEach(el => el.remove());
