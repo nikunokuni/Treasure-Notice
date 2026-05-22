@@ -727,6 +727,7 @@ const App = {
     App._saveRecord();
     persistSave();
     render();
+    setTimeout(triggerFindingAnim, 50);
   },
 
   // きろくノート保存
