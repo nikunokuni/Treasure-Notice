@@ -14,7 +14,7 @@ const TYPES = [
     desc:'見えない部分を推理する。「もしかして〜かな？」' },
 ];
 
-const AGE_GROUPS = [
+const agePrompts = [
   { id:'young',  label:'3〜5さい',  icon:'🐣', desc:'ひらがなメイン・短い文・五感中心' },
   { id:'middle', label:'6〜8さい',  icon:'🌱', desc:'すこし複雑な問いかけも楽しめる' },
   { id:'older',  label:'9〜12さい', icon:'🌳', desc:'論理的な思考・深い考察も可能' },
