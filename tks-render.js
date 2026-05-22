@@ -16,7 +16,16 @@ function aiText(str) {
 }
 
 /* ═══════════════════════════════
-   たからさがし — render  v5
+   たからさがし — render  v6
+   変更点：
+   ① ストリークをホーム・ヒーローエリアへ移動
+   ② チャット上部にプログレスバー＋ヒントバブル追加
+   ③ サマリー finding-item に順番アニメーション
+   ④ サマリーに「がぞうとしてほぞん」ボタン追加
+   ⑤ chat-close-btn → back-btn（◀ ホームにもどる）
+   ⑥ たからばこ：レンズをアイコン・名前の横に表示、しおりと重ならない
+   ⑦ おきにいり：バッジをリスト上部に移動
+   ⑧ カレンダータブを開いたときお宝バースト演出
    ═══════════════════════════════ */
 
 function renderTabs() {
@@ -49,7 +58,7 @@ function renderChatHeader() {
         <span class="chat-header-name">${esc(S.odai?.name || '')}</span>
         ${lens ? `<span class="chat-header-lens">${lens.icon} ${esc(lens.name)}</span>` : ''}
       </div>
-      <button class="back-btn" onclick="goHome()">◀ ホームにもどる</button>
+      <button class="back-btn" onclick="App.closeChatFlow()">◀ ホームにもどる</button>
     </div>`;
 }
 
@@ -157,21 +166,47 @@ function renderHome() {
   const r    = S.randOdai || pickRand();
   if (!S.randOdai) S.randOdai = r;
 
+  // ① ストリーク：今週7日分のドット
+  const today  = new Date();
+  const weekDots = Array.from({length: 7}, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() - (6 - i));
+    const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    const done = S.records.some(rec => {
+      const rd = new Date(rec.date);
+      return rd.getFullYear() === d.getFullYear()
+          && rd.getMonth()    === d.getMonth()
+          && rd.getDate()     === d.getDate();
+    });
+    const isToday = i === 6;
+    return `<span style="font-size:${isToday?'18':'15'}px;opacity:${done?'1':'0.35'}">${done ? '✅' : (isToday ? '⭕' : '○')}</span>`;
+  }).join('');
+
+  const streakMsg = S.streak === 0
+    ? 'きょうからはじめよう！'
+    : S.streak < 3
+    ? `${S.streak}にちれんぞく！このちょうしで！`
+    : S.streak < 7
+    ? `すごい！${S.streak}にちれんぞく中🎉`
+    : `${S.streak}にち！もうヒーローだ⭐`;
+
   return `
-  <div class="hero-streak">
-  <div style="display:flex;align-items:center;justify-content:space-between;">
-    <div>
-      <div style="font-size:9px;color:rgba(255,255,255,0.7);letter-spacing:.18em;">🔥 れんぞくきろく</div>
-      <div style="display:flex;align-items:baseline;gap:4px;margin-top:3px;">
-        <span class="hero-streak-num">${S.streak}</span>
-        <span class="hero-streak-unit">にち</span>
-      </div>
-    </div>
-    <div style="display:flex;gap:4px;">${weekDots}</div>
-  </div>
-  <div class="hero-streak-msg">🎉 ${streakMessage}</div>
-</div>
     <div class="content">
+      <!-- ① ストリーク ヒーローエリア -->
+      <div class="hero-streak">
+        <div class="hero-streak-top">
+          <div>
+            <div class="hero-streak-label">🔥 れんぞくきろく</div>
+            <div style="display:flex;align-items:baseline;gap:4px;margin-top:3px">
+              <span class="hero-streak-num">${S.streak}</span>
+              <span class="hero-streak-unit">にち</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:3px;align-items:center">${weekDots}</div>
+        </div>
+        <div class="hero-streak-msg">${streakMsg}</div>
+      </div>
+
       <div class="home-greeting">
         <span class="home-greeting-emoji">🔍</span>
         <div>
@@ -266,9 +301,40 @@ function renderLens() {
 function renderChat() {
   const u = S.user;
   const userMsgCount = S.messages.filter(m => m.role !== 'ai').length;
+  const lens = LENSES.find(l => l.id === S.lens);
+
+  // ② プログレスバー：10往復を満タンとする
+  const CHAT_MAX = 10;
+  const progress = Math.min(userMsgCount / CHAT_MAX, 1);
+  const pct      = Math.round(progress * 100);
+
+  // レンズ別ヒント（最初の発言後に1回だけ表示）
+  const LENS_HINTS = {
+    'ことば':  'きょうのたからをあらわす<strong>おもしろいことば</strong>、みつかったかな？',
+    'かず':    '<strong>おおきさ・かず・かたち</strong>をよくみてみよう！くらべてみると楽しいよ',
+    'かがく':  '<strong>なぜ？どうして？</strong>って思ったら、ぜひ聞いてみよう！',
+    'しゃかい': 'だれかの<strong>やくに立ってる</strong>かな？どうやって作られてるんだろう？',
+    'えいご':  'このたから、えいごでなんていうか<strong>いっしょに調べよう</strong>🇺🇸',
+    'じぶん':  '<strong>どんなきもち</strong>がした？すきかきらいか、なんでも話してみよう',
+  };
+  const hintText  = lens ? (LENS_HINTS[lens.id] || '') : '';
+  const showHint  = hintText && userMsgCount >= 1 && userMsgCount <= 3;
+
   return `
-  const progress = Math.min(S.messages.length / 6, 1); // 6回で満タン
-const hintText = LENS_HINTS[S.lens];
+    <div class="chat-progress-wrap">
+      <div class="chat-progress-row">
+        <span class="chat-progress-label">おはなしのながれ</span>
+        <span class="chat-progress-count">${userMsgCount} / ${CHAT_MAX}</span>
+      </div>
+      <div class="chat-progress-bar">
+        <div class="chat-progress-fill" style="width:${pct}%"></div>
+      </div>
+    </div>
+    ${showHint ? `
+      <div class="hint-bubble">
+        <span class="hint-icon">💡</span>
+        <div class="hint-text">${hintText}</div>
+      </div>` : ''}
     <div class="chat-wrap">
       <div class="speaker-row">
         <div class="speaker-btn ${S.speaker === 'child'  ? 'active-child'  : ''}"
@@ -335,7 +401,7 @@ function renderSummary() {
         <div class="summary-hero-ttl">たからみつかった！</div>
       </div>
 
-      <div class="findings-card">
+      <div class="findings-card" id="summary-capture-area">
         <button class="bookmark-btn ${S.bookmarked ? 'active' : ''}"
                 onclick="App.toggleBookmark()">🔖</button>
         <div class="findings-label">✨ きょうみつけたたから</div>
@@ -344,11 +410,17 @@ function renderSummary() {
                <span class="spinner"></span>まとめているよ…
              </div>`
           : items.map((f,i) => `
-              <div class="finding-item">
+              <div class="finding-item finding-item-anim"
+                   style="animation-delay:${0.1 + i * 0.18}s">
                 <div class="finding-dot" style="background:${colors[i % colors.length]}"></div>
                 <div class="finding-text">${esc(f)}</div>
               </div>`).join('')}
       </div>
+
+      <!-- ④ 画像として保存ボタン -->
+      <button class="summary-save-btn" onclick="App.saveSummaryImage()">
+        📸 がぞうとしてほぞん
+      </button>
 
       <!-- きろくノート（子ども記入欄） -->
       <div class="note-card">
@@ -369,15 +441,21 @@ function renderSummary() {
               ${paras.map(p => `<div class="ai-opinion-para">${esc(p)}</div>`).join('')}
             </div>` : ''}
         </div>` : ''}
-        <button class="summary-save-btn" onclick="saveSummaryImage()">
-  <span>📸</span><span>がぞうとしてほぞん</span>
-</button>
 
       <div class="summary-actions">
         <button class="btn-again"     onclick="App.doAgain()">🔄 別のレンズで</button>
         <button class="btn-next-odai" onclick="App.nextOdai()">つぎのお題 ›</button>
       </div>
     </div>`;
+}
+
+// ③ サマリー描画後にアニメーション起動（render() の末尾から呼ぶ）
+function triggerFindingAnim() {
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.finding-item-anim').forEach(el => {
+      el.classList.add('finding-item-visible');
+    });
+  });
 }
 
 // ── カレンダー ──
@@ -402,30 +480,23 @@ function renderCal() {
   const monthName   = `${year}年${month+1}月`;
   const dows        = ['日','月','火','水','木','金','土'];
 
+  // スタンプに使う絵文字：記録のemojiを使う（なければ🔍）
   let cells = '';
   for (let i = 0; i < firstDay; i++) cells += `<div class="cal-day empty"></div>`;
   for (let d = 1; d <= daysInMonth; d++) {
     const isToday   = isThisMonth && d === now.getDate();
     const isStamped = !!dayMap[d];
+    const stamp     = isStamped ? (dayMap[d][0].odai?.emoji || '🔍') : '';
     const onclick   = isStamped ? `onclick="App.showDayTakara(${year},${month},${d})"` : '';
     cells += `
       <div class="cal-day ${isToday?'today':''} ${isStamped?'stamped':''}" ${onclick}>
-        ${isStamped ? `<div class="cal-stamp">🔍</div>` : ''}
+        ${isStamped ? `<div class="cal-stamp">${stamp}</div>` : ''}
         <div style="font-size:${isStamped?'9':'11'}px;opacity:${isStamped?'.5':'1'}">${d}</div>
       </div>`;
   }
 
   return `
     <div class="content">
-      <div class="cal-streak">
-        <div>
-          <div class="cal-streak-num">${S.streak}🔥</div>
-          <div class="cal-streak-lbl">れんぞく日</div>
-        </div>
-        <div style="flex:1;font-size:11px;color:rgba(45,27,0,0.45);padding-left:8px;line-height:1.6">
-          ${S.streak > 0 ? `${S.streak}日れんぞくでたからさがし中！` : 'きょうから始めよう！'}
-        </div>
-      </div>
       <div class="cal-header">
         <button class="cal-nav" onclick="App.calPrev()">‹</button>
         <div class="cal-month">${monthName}</div>
@@ -438,6 +509,42 @@ function renderCal() {
       <div class="section-ttl">今月の発見 ${Object.keys(dayMap).length}日</div>
     </div>
     ${S.dayModal ? renderDayModal() : ''}`;
+}
+
+// ⑧ カレンダーを開いたときのお宝バースト演出
+function triggerCalBurst() {
+  const emojis = S.records.map(r => r.odai?.emoji).filter(Boolean);
+  if (emojis.length === 0) return;
+
+  // phone フレームを基準に中央を計算
+  const phone = document.querySelector('.phone');
+  if (!phone) return;
+  const rect = phone.getBoundingClientRect();
+  const cx   = rect.left + rect.width  / 2;
+  const cy   = rect.top  + rect.height / 2;
+
+  // 既存レイヤーがあれば除去
+  document.querySelectorAll('.cal-burst-wrap').forEach(el => el.remove());
+
+  const layer = document.createElement('div');
+  layer.className = 'cal-burst-wrap';
+  document.body.appendChild(layer);
+
+  const count = Math.min(emojis.length, 20);
+  for (let i = 0; i < count; i++) {
+    const el    = document.createElement('div');
+    el.className = 'cal-burst-item';
+    const angle  = (i / count) * Math.PI * 2;
+    const dist   = 90 + Math.random() * 120;
+    const tx     = Math.round(Math.cos(angle) * dist);
+    const ty     = Math.round(Math.sin(angle) * dist);
+    el.style.cssText =
+      `left:${cx}px;top:${cy}px;--tx:${tx}px;--ty:${ty}px;` +
+      `animation-delay:${i * 0.045}s;`;
+    el.textContent = emojis[i % emojis.length];
+    layer.appendChild(el);
+  }
+  setTimeout(() => layer.remove(), 1800);
 }
 
 function renderDayModal() {
@@ -454,23 +561,6 @@ function renderDayModal() {
         ${records.map(r => renderTakaraCard(r, false)).join('')}
       </div>
     </div>`;
-   function burstTreasures() {
-  const layer = document.createElement('div');
-  layer.className = 'cal-burst-wrap';
-  document.body.appendChild(layer);
-  const emojis = S.records.map(r => r.emoji).slice(0, 18);
-  const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
-  emojis.forEach((emoji, i) => {
-    const el = document.createElement('div');
-    el.className = 'cal-burst-item';
-    const angle = (i / emojis.length) * Math.PI * 2;
-    const dist = 100 + Math.random() * 130;
-    el.style.cssText = `left:${cx}px;top:${cy}px;--tx:${Math.cos(angle)*dist|0}px;--ty:${Math.sin(angle)*dist|0}px;animation-delay:${i*0.045}s;`;
-    el.textContent = emoji;
-    layer.appendChild(el);
-  });
-  setTimeout(() => layer.remove(), 1800);
-}
 }
 
 // ── たからばこ ──
@@ -518,17 +608,6 @@ function renderBox() {
       ${recs.length === 0
         ? `<div class="empty-msg">📦<br>まだたからがないよ<br>さがしにいこう！</div>`
         : recs.map(r => renderTakaraCard(r, true)).join('')}
-
-      <div class="section-ttl" style="margin-top:14px">バッジ</div>
-      <div class="badge-grid">
-        <div class="badge ${S.records.length>=1?'badge-on':'badge-off'}">🔍 はじめての発見</div>
-        <div class="badge ${S.records.some(r=>r.lens==='かがく')?'badge-on':'badge-off'}">🔬 かがく探検家</div>
-        <div class="badge ${S.streak>=3?'badge-on':'badge-off'}">📅 3日れんぞく</div>
-        <div class="badge ${S.records.some(r=>r.lens==='じぶん')?'badge-on':'badge-off'}">💛 じぶん探検家</div>
-        <div class="badge ${S.records.length>=10?'badge-on':'badge-off'}">⭐ 10こ発見</div>
-        <div class="badge ${S.records.some(r=>r.lens==='えいご')?'badge-on':'badge-off'}">🌍 えいご探検家</div>
-        <div class="badge ${lensUsed>=6?'badge-on':'badge-off'}">🌈 レンズマスター</div>
-      </div>
     </div>`;
 }
 
@@ -560,18 +639,31 @@ function renderNote() {
 }
 
 // ── おきにいり ──
+// ⑦ バッジをリスト上部に移動
 function renderFav() {
-  const favs = S.records.filter(r=>r.bookmarked).slice().reverse();
+  const favs    = S.records.filter(r=>r.bookmarked).slice().reverse();
+  const lensUsed = [...new Set(S.records.map(r=>r.lens).filter(Boolean))].length;
+
   return `
-  <!-- バッジを最上部 -->
-    <div class="badge-section-top">
-      <div class="badge-section-ttl">🏅 かくとくしたバッヂ</div>
-      <div class="badge-grid">${renderBadges()}</div>
-    </div>
     <div class="content">
       <div style="font-family:'Kaisei Decol',serif;font-size:16px;color:var(--deep);margin-bottom:14px">
         ⭐ おきにいりのたから
       </div>
+
+      <!-- ⑦ バッジを上部に -->
+      <div class="badge-section-top">
+        <div class="badge-section-ttl">🏅 かくとくしたバッヂ</div>
+        <div class="badge-grid">
+          <div class="badge ${S.records.length>=1?'badge-on':'badge-off'}">🔍 はじめての発見</div>
+          <div class="badge ${S.records.some(r=>r.lens==='かがく')?'badge-on':'badge-off'}">🔬 かがく探検家</div>
+          <div class="badge ${S.streak>=3?'badge-on':'badge-off'}">📅 3日れんぞく</div>
+          <div class="badge ${S.records.some(r=>r.lens==='じぶん')?'badge-on':'badge-off'}">💛 じぶん探検家</div>
+          <div class="badge ${S.records.length>=10?'badge-on':'badge-off'}">⭐ 10こ発見</div>
+          <div class="badge ${S.records.some(r=>r.lens==='えいご')?'badge-on':'badge-off'}">🌍 えいご探検家</div>
+          <div class="badge ${lensUsed>=6?'badge-on':'badge-off'}">🌈 レンズマスター</div>
+        </div>
+      </div>
+
       ${favs.length === 0
         ? `<div class="empty-msg">⭐<br>おきにいりがまだないよ<br>🔖を押してみよう！</div>`
         : favs.map(r => renderTakaraCard(r, true)).join('')}
@@ -579,22 +671,21 @@ function renderFav() {
 }
 
 // ── たからカード（共通） ──
+// ⑥ レンズタグをアイコン・名前の横（右端）に表示。しおりボタンと重ならないよう meta にまとめる。
 function renderTakaraCard(r, showFavBtn) {
   const lens   = LENSES.find(l=>l.id===r.lens);
   const colors = ['#e8860a','#0a9396','#e76f51','#52b788','#9b89c4','#ffd166'];
   const idx    = S.records.lastIndexOf(r);
   return `
     <div class="takara-item">
-      ${showFavBtn ? `
-        <button class="takara-fav-btn ${r.bookmarked?'active':''}"
-                onclick="App.toggleRecordFav(${idx})">🔖</button>` : ''}
-     <div class="takara-item-header">
-  <span class="takara-item-emoji">${e}</span>
-  <span class="takara-item-name">${name}</span>
-  <div class="takara-item-meta">
-    <span class="takara-item-lens">${lensEmoji} ${lens}</span>
-  </div>
-</div>
+      <div class="takara-item-header">
+        <span class="takara-item-emoji">${r.odai.emoji}</span>
+        <span class="takara-item-name">${esc(r.odai.name)}</span>
+        ${lens ? `
+          <div class="takara-item-meta${showFavBtn ? ' takara-item-meta--fav' : ''}">
+            <span class="takara-item-lens">${lens.icon} ${esc(lens.name)}</span>
+          </div>` : (showFavBtn ? '<div class="takara-item-meta takara-item-meta--fav"></div>' : '')}
+      </div>
       <div class="takara-findings">
         ${(r.findings||[]).map((f,i)=>`
           <div class="takara-finding">
@@ -604,6 +695,9 @@ function renderTakaraCard(r, showFavBtn) {
       </div>
       ${r.note ? `<div class="takara-note">📓 ${esc(r.note)}</div>` : ''}
       <div class="takara-item-date">${fmtDate(r.date)}</div>
+      ${showFavBtn ? `
+        <button class="takara-fav-btn ${r.bookmarked?'active':''}"
+                onclick="App.toggleRecordFav(${idx})">🔖</button>` : ''}
     </div>`;
 }
 
@@ -720,3 +814,121 @@ function renderSettings() {
 }
 
 // fmtDate / pickRand は tks-logic.js で定義（ODAI_ALL への依存のため）
+
+/* ═══════════════════════════════════════════════════════════
+   tks-style.css に追記が必要な差分CSS（v6対応）
+   ═══════════════════════════════════════════════════════════
+
+  // ① ホーム ストリークヒーロー
+  .hero-streak {
+    background: linear-gradient(135deg, var(--amber), var(--coral-light));
+    border-radius: 20px; padding: 14px 16px 12px; margin-bottom: 14px;
+    position: relative; overflow: hidden;
+    box-shadow: 0 6px 20px rgba(232,134,10,0.28);
+  }
+  .hero-streak::before { content:'🔥'; position:absolute; right:-8px; bottom:-10px; font-size:72px; opacity:.12; }
+  .hero-streak-top  { display:flex; align-items:center; justify-content:space-between; }
+  .hero-streak-label{ font-size:9px; color:rgba(255,255,255,0.75); letter-spacing:.18em; }
+  .hero-streak-num  { font-family:'Kaisei Decol',serif; font-size:38px; color:white; line-height:1; }
+  .hero-streak-unit { font-size:11px; color:rgba(255,255,255,0.8); }
+  .hero-streak-msg  { font-size:10px; color:rgba(255,255,255,0.85); margin-top:6px; line-height:1.5; }
+
+  // ② チャット プログレスバー＋ヒントバブル
+  .chat-progress-wrap  { padding:8px 14px 0; flex-shrink:0; background:var(--paper); }
+  .chat-progress-row   { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
+  .chat-progress-label { font-size:9px; color:rgba(45,27,0,0.45); letter-spacing:.1em; }
+  .chat-progress-count { font-size:9px; color:var(--amber); font-weight:700; }
+  .chat-progress-bar   { height:5px; background:rgba(232,134,10,0.12); border-radius:10px; overflow:hidden; margin-bottom:8px; }
+  .chat-progress-fill  { height:100%; background:linear-gradient(90deg,var(--amber),var(--coral-light)); border-radius:10px; transition:width .6s ease; }
+  .hint-bubble {
+    margin:0 14px 8px; padding:8px 12px;
+    background:rgba(255,209,102,0.15); border:1.5px solid rgba(232,134,10,0.2);
+    border-radius:14px; display:flex; align-items:flex-start; gap:8px;
+    animation:hint-pop .4s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes hint-pop { 0%{transform:scale(0.9);opacity:0;} 100%{transform:scale(1);opacity:1;} }
+  .hint-icon { font-size:15px; flex-shrink:0; }
+  .hint-text { font-size:10px; color:var(--deep); line-height:1.65; }
+  .hint-text strong { color:var(--amber); font-weight:700; }
+
+  // ③ サマリー finding アニメーション
+  .finding-item-anim {
+    opacity:0; transform:translateY(10px);
+  }
+  .finding-item-visible {
+    animation:finding-in .5s cubic-bezier(.34,1.28,.64,1) forwards;
+  }
+  @keyframes finding-in {
+    0%  { opacity:0; transform:translateY(10px); }
+    100%{ opacity:1; transform:translateY(0); }
+  }
+
+  // ④ サマリー保存ボタン
+  .summary-save-btn {
+    display:flex; align-items:center; justify-content:center; gap:7px;
+    width:100%; padding:10px; margin-bottom:10px;
+    background:white; color:var(--teal);
+    border:2px solid rgba(10,147,150,0.25); border-radius:14px;
+    font-family:'Zen Maru Gothic',sans-serif; font-size:12px; font-weight:700;
+    cursor:pointer; transition:all .15s;
+  }
+  .summary-save-btn:active { background:rgba(10,147,150,0.06); transform:translateY(1px); }
+
+  // ⑤ back-btn（旧 chat-close-btn を置き換え）
+  .back-btn {
+    display:flex; align-items:center; gap:4px;
+    font-size:11px; color:var(--teal);
+    background:rgba(10,147,150,0.08); border:none; border-radius:20px;
+    padding:5px 11px; cursor:pointer; flex-shrink:0;
+    font-family:'Zen Maru Gothic',sans-serif; font-weight:700;
+    transition:background .15s;
+  }
+  .back-btn:active { background:rgba(10,147,150,0.15); }
+
+  // ⑥ たからカード レンズ位置修正
+  .takara-item-meta {
+    display:flex; align-items:center; gap:5px;
+  }
+  .takara-item-meta--fav {
+    margin-right:26px;  // しおりボタン（18px）＋余白
+  }
+
+  // ⑦ おきにいり バッジ上部セクション
+  .badge-section-top {
+    background:white; border-radius:14px; padding:11px 12px;
+    margin-bottom:12px; border:1.5px solid rgba(45,27,0,0.06);
+  }
+  .badge-section-ttl {
+    font-size:9px; letter-spacing:.2em; color:rgba(45,27,0,0.35); margin-bottom:9px;
+  }
+
+   ※ カレンダー .cal-streak は不要になったので削除可（ヒーロー移動のため）
+
+   ═══════════════════════════════════════════════════════════
+   tks-logic.js（または App オブジェクト）に追記が必要な差分JS
+   ═══════════════════════════════════════════════════════════
+
+  // ⑧ カレンダータブ切り替え時にバースト
+  // App.switchTab の case 'cal' に追記:
+  //   setTimeout(triggerCalBurst, 120);
+
+  // ③ サマリー render 後にアニメーション起動
+  // render() 内で S.screen === 'summary' の直後:
+  //   if (S.screen === 'summary') setTimeout(triggerFindingAnim, 50);
+
+  // ④ 画像保存（html2canvas 使用）
+  // <head> に追加:
+  //   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  //
+  // App に追加:
+  //   saveSummaryImage: async function() {
+  //     const el = document.getElementById('summary-capture-area');
+  //     if (!el) return;
+  //     const canvas = await html2canvas(el, { backgroundColor:'#fdf6e3', scale:2 });
+  //     const a = document.createElement('a');
+  //     a.download = 'たからもの_' + (S.odai?.name || 'きろく') + '.png';
+  //     a.href = canvas.toDataURL('image/png');
+  //     a.click();
+  //   },
+   ═══════════════════════════════════════════════════════════ */
+
