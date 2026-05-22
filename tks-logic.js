@@ -970,7 +970,8 @@ const App = {
   },
 
   // ── PWA アップデート適用 ──
-  applyUpdate() {    if (App._waitingSW) {
+  applyUpdate() {
+    if (App._waitingSW) {
       App._waitingSW.postMessage('skipWaiting');
     } else {
       window.location.reload();
