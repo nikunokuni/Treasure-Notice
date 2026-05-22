@@ -128,7 +128,7 @@ function renderOnboard() {
 }
 
 function renderAgeCards(current) {
-  return AGE_GROUPS.map(a => `
+  return agePrompts.map(a => `
     <div class="type-card ${current === a.id ? 'sel-age' : ''}"
          onclick="App.setAge('${a.id}')">
       <div class="type-badge type-badge-age">${a.icon}</div>
@@ -161,7 +161,7 @@ function renderParentChips(current) {
 function renderHome() {
   const u    = S.user;
   const type = TYPES.find(t => t.id === u.type) || TYPES[0];
-  const age  = AGE_GROUPS.find(a => a.id === (u.ageGroup||'young')) || AGE_GROUPS[0];
+  const age  = agePrompts.find(a => a.id === (u.ageGroup||'young')) || agePrompts[0];
   const rec  = S.records.slice(-3).reverse();
   const r    = S.randOdai || pickRand();
   if (!S.randOdai) S.randOdai = r;
