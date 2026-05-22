@@ -456,7 +456,7 @@ function triggerFindingAnim() {
       el.classList.add('finding-item-visible');
     });
   });
-}
+},
 async saveSummaryImage() {
   const el = document.getElementById('summary-capture-area');
   if (!el) return;
