@@ -1273,7 +1273,7 @@ const App = {
   },
 
   sendFeedback(){
-    const FORM_URL='https://forms.gle/XEVhBG2636FCohLw9';
+    const FORM_URL='https://x.gd/Jp9px';
     window.open(FORM_URL,'_blank','noopener,noreferrer');
     if(!S.feedbackSent){ S.feedbackSent=true; App._checkAndNotifyBadges(); persistSave(); }
   },
