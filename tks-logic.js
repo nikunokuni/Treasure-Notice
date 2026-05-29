@@ -916,33 +916,55 @@ const App = {
   },
 
   // ── サマリー生成 ──
-  async goSummary(){
-    S.flow='summary';
-    S.summaryItems=[];
-    S.summaryOpinion='';
-    S.opinionOpen=false;
-    S.bookmarked=false;
-    S.currentNote='';
+ async goSummary() {
+    S.flow           = 'summary';
+    S.summaryItems   = [];
+    S.summaryOpinion = '';
+    S.opinionOpen    = false;
+    S.bookmarked     = false;
+    S.currentNote    = '';
+    S.tomorrowHint   = '';        // ← 追加：リセット
     render();
 
     try {
-      const res=await callAI(
-        [{role:'user',content:'まとめてください。'}],
-        summarySystem()
-      );
-      const data=JSON.parse(res.replace(/```json|```/g,'').trim());
-      S.summaryItems=data.findings||[];
-      S.summaryOpinion=data.opinion||'';
-    } catch(err){
-      console.error('summary error:',err);
-      S.summaryItems=['いっぱいかんがえた！'];
-      S.summaryOpinion='ふたりとも、すごいはっけんだったね！';
+      const res  = await callAI([{ role:'user', content:'まとめてください。' }], summarySystem());
+      const data = JSON.parse(res.replace(/```json|```/g, '').trim());
+      S.summaryItems   = data.findings || [];
+      S.summaryOpinion = data.opinion  || '';
+    } catch(err) {
+      console.error('summary error:', err);
+      S.summaryItems   = ['いっぱいかんがえた！'];
+      S.summaryOpinion = 'ふたりとも、すごいはっけんだったね！';
     }
 
     App._saveRecord();
     persistSave();
     render();
-    setTimeout(triggerFindingAnim,50);
+    setTimeout(triggerFindingAnim, 50);
+
+    // ── 「あしたやってみよう！」を非同期で生成（描画をブロックしない）──
+    App._generateTomorrowHint();
+  },
+
+  // ── 「あしたやってみよう！」生成（1文・キャッシュあり） ──
+  async _generateTomorrowHint() {
+    if (S.tomorrowHint) return;   // すでに生成済みなら何もしない
+    try {
+      const odaiName  = S.odai?.name  || '';
+      const lensName  = S.lens        || '';
+      const findingsTxt = (S.summaryItems || []).join('、');
+      const prompt = `子ども向けアプリで、お題「${odaiName}」をレンズ「${lensName}」で探索し、「${findingsTxt}」を発見しました。明日の日常で意識できることを、子ども（3〜9歳）向けに1文でやさしく提案してください。JSONのみ: {"hint":"ひらがな・ことばあそびで1文"}`;
+      const res = await callAI(
+        [{ role:'user', content: prompt }],
+        'JSONのみ返してください（Markdownなし）。子どもが実践できる具体的な行動を1文で。'
+      );
+      const data = JSON.parse(res.replace(/```json|```/g, '').trim());
+      S.tomorrowHint = data.hint || '';
+    } catch(err) {
+      console.error('tomorrowHint error:', err);
+      S.tomorrowHint = 'あしたも、まわりのものをじっくりみてみよう！';
+    }
+    render();
   },
 
   saveNote(){
