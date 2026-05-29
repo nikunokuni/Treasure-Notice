@@ -488,7 +488,16 @@ function renderSummary(){
           </div>
         </div>
       </div>
-
+      <!-- あしたやってみよう！ -->
+      <div class="tomorrow-card">
+        <div class="tomorrow-label">🌱 あしたやってみよう！</div>
+        ${!S.tomorrowHint
+          ? `<div class="tomorrow-loading">
+               <span class="spinner" style="width:12px;height:12px"></span>
+               <span>かんがえているよ…</span>
+             </div>`
+          : `<div class="tomorrow-text">${esc(S.tomorrowHint)}</div>`}
+      </div>
       <!-- きろくノート -->
       <div class="note-card">
         <div class="note-label">📓 きろくノート</div>
