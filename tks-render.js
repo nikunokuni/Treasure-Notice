@@ -497,15 +497,6 @@ function renderSummary(){
         <button class="note-save-btn" onclick="App.saveNote()">💾 ほぞんする</button>
       </div>
 
-      <!-- 次の日常の行動声掛け -->
-      <div id="next-action-tip-card" class="${S.nextActionTip?'next-action-tip-card':'next-action-tip-card loading'}">
-        ${S.nextActionTip?renderNextActionTipInner(S.nextActionTip):`
-          <div class="nat-loading-row">
-            <span class="spinner" style="width:14px;height:14px"></span>
-            <span>あしたのたいけんをかんがえてるよ…</span>
-          </div>`}
-      </div>
-
       <!-- アクション -->
       <div class="summary-action-row">
         <button class="summary-action-btn summary-action-again" onclick="App.doAgain()">
@@ -526,15 +517,6 @@ function renderSummary(){
         </button>
       </div>
     </div>`;
-}
-
-function renderNextActionTipInner(tip){
-  return `
-    <div class="nat-header">
-      <span class="nat-icon">🌱</span>
-      <span class="nat-label">あしたやってみよう！</span>
-    </div>
-    <div class="nat-tip">${esc(tip)}</div>`;
 }
 
 function triggerFindingAnim(){

@@ -3,7 +3,7 @@
    ═══════════════════════════════ */
 
 // ── 定数 ──
-const PARENT_OPTS = ['パパ','ママ','きょうだい','ともだち','ひとり','その他'];
+const PARENT_OPTS = ['パパ','ママ','きょうだい','ともだち','一人','その他'];
 
 // ── カラーテーマ（12色相環） ──
 const COLOR_THEMES = [
@@ -108,76 +108,28 @@ const agePrompts = [
   { id:'older',  label:'9〜12さい', icon:'🌳', desc:'ろんりてきなしこう・ふかいこうさつもできる' },
 ];
 
-// ── バッヂ定義（40個）──
-// カテゴリ: lens / streak / count / action / special
+// ── バッヂ定義（20個） ──
 const BADGES = [
-  // ── たからさがし回数 ──
-  { id:'first',       cat:'count',  icon:'🔍', name:'はじめてのはっけん',    cond:'たからさがしを1かいやった',              check: s=>s.records.length>=1 },
-  { id:'ten',         cat:'count',  icon:'⭐', name:'10こはっけん',          cond:'たからを10こあつめた',                  check: s=>s.records.length>=10 },
-  { id:'fifty',       cat:'count',  icon:'🏆', name:'たから50こ！',          cond:'たからを50こあつめた',                  check: s=>s.records.length>=50 },
-
-  // ── ことばレンズ ──
-  { id:'kotoba1',     cat:'lens',   icon:'📖', name:'ことばたんけんか',      cond:'ことばレンズで1かいたんけんした',        check: s=>s.records.filter(r=>r.lens==="ことば").length>=1 },
-  { id:'kotoba10',    cat:'lens',   icon:'📚', name:'ことばのつかいて',      cond:'ことばレンズで10かいたんけんした',       check: s=>s.records.filter(r=>r.lens==="ことば").length>=10 },
-  { id:'kotoba50',    cat:'lens',   icon:'✍️', name:'ことばのたつじん',      cond:'ことばレンズで50かいたんけんした',       check: s=>s.records.filter(r=>r.lens==="ことば").length>=50 },
-
-  // ── かずレンズ ──
-  { id:'kazu1',       cat:'lens',   icon:'🔢', name:'かずたんけんか',        cond:'かずレンズで1かいたんけんした',          check: s=>s.records.filter(r=>r.lens==="かず").length>=1 },
-  { id:'kazu10',      cat:'lens',   icon:'📐', name:'かずのつかいて',        cond:'かずレンズで10かいたんけんした',         check: s=>s.records.filter(r=>r.lens==="かず").length>=10 },
-  { id:'kazu50',      cat:'lens',   icon:'🧮', name:'かずのたつじん',        cond:'かずレンズで50かいたんけんした',         check: s=>s.records.filter(r=>r.lens==="かず").length>=50 },
-
-  // ── かがくレンズ ──
-  { id:'kagaku1',     cat:'lens',   icon:'🔬', name:'かがくたんけんか',      cond:'かがくレンズで1かいたんけんした',        check: s=>s.records.filter(r=>r.lens==="かがく").length>=1 },
-  { id:'kagaku10',    cat:'lens',   icon:'⚗️', name:'かがくのつかいて',      cond:'かがくレンズで10かいたんけんした',       check: s=>s.records.filter(r=>r.lens==="かがく").length>=10 },
-  { id:'kagaku50',    cat:'lens',   icon:'🧪', name:'かがくのたつじん',      cond:'かがくレンズで50かいたんけんした',       check: s=>s.records.filter(r=>r.lens==="かがく").length>=50 },
-
-  // ── しゃかいレンズ ──
-  { id:'shakai1',     cat:'lens',   icon:'🗺', name:'しゃかいたんけんか',    cond:'しゃかいレンズで1かいたんけんした',      check: s=>s.records.filter(r=>r.lens==="しゃかい").length>=1 },
-  { id:'shakai10',    cat:'lens',   icon:'🏛', name:'しゃかいのつかいて',    cond:'しゃかいレンズで10かいたんけんした',     check: s=>s.records.filter(r=>r.lens==="しゃかい").length>=10 },
-  { id:'shakai50',    cat:'lens',   icon:'🌍', name:'しゃかいのたつじん',    cond:'しゃかいレンズで50かいたんけんした',     check: s=>s.records.filter(r=>r.lens==="しゃかい").length>=50 },
-
-  // ── じぶんレンズ ──
-  { id:'jibun1',      cat:'lens',   icon:'💛', name:'じぶんたんけんか',      cond:'じぶんレンズで1かいたんけんした',        check: s=>s.records.filter(r=>r.lens==="じぶん").length>=1 },
-  { id:'jibun10',     cat:'lens',   icon:'💜', name:'じぶんのつかいて',      cond:'じぶんレンズで10かいたんけんした',       check: s=>s.records.filter(r=>r.lens==="じぶん").length>=10 },
-  { id:'jibun50',     cat:'lens',   icon:'❤️', name:'じぶんのたつじん',      cond:'じぶんレンズで50かいたんけんした',       check: s=>s.records.filter(r=>r.lens==="じぶん").length>=50 },
-
-  // ── レンズ横断 ──
-  { id:'lens2',       cat:'lens',   icon:'👓', name:'ふたつのめ',            cond:'2しゅるいのレンズをつかった',            check: s=>new Set(s.records.map(r=>r.lens).filter(Boolean)).size>=2 },
-  { id:'lensmaster',  cat:'lens',   icon:'🌈', name:'レンズマスター',        cond:'5つのレンズをすべてつかった',            check: s=>new Set(s.records.map(r=>r.lens).filter(Boolean)).size>=5 },
-
-  // ── 連続日数 ──
-  { id:'streak1',     cat:'streak', icon:'📅', name:'はじめてのれんぞく',    cond:'1にちたからさがしをした',                check: s=>s.streak>=1 },
-  { id:'streak7',     cat:'streak', icon:'🔥', name:'1しゅうかんれんぞく',   cond:'7にちれんぞくでたからさがしをした',      check: s=>s.streak>=7 },
-  { id:'streak30',    cat:'streak', icon:'🌟', name:'1かげつれんぞく',       cond:'30にちれんぞくでたからさがしをした',     check: s=>s.streak>=30 },
-
-  // ── 通算日数 ──
-  { id:'days1',       cat:'count',  icon:'🌱', name:'たんけんかいし',        cond:'1にちたんけんした',                      check: s=>calcTotalDays_(s)>=1 },
-  { id:'days10',      cat:'count',  icon:'🌿', name:'10にちたんけん',        cond:'10にちたんけんした',                     check: s=>calcTotalDays_(s)>=10 },
-  { id:'days50',      cat:'count',  icon:'🌳', name:'50にちたんけん',        cond:'50にちたんけんした',                     check: s=>calcTotalDays_(s)>=50 },
-
-  // ── おきにいり ──
-  { id:'bookmark1',   cat:'count',  icon:'🔖', name:'はじめてのおきにいり',  cond:'おきにいりを1こあつめた',                check: s=>s.records.filter(r=>r.bookmarked).length>=1 },
-  { id:'bookmark10',  cat:'count',  icon:'📌', name:'コレクター',            cond:'おきにいりを10こあつめた',               check: s=>s.records.filter(r=>r.bookmarked).length>=10 },
-  { id:'bookmark50',  cat:'count',  icon:'💝', name:'たからコレクター',      cond:'おきにいりを50こあつめた',               check: s=>s.records.filter(r=>r.bookmarked).length>=50 },
-
-  // ── ノート ──
-  { id:'note1',       cat:'count',  icon:'✏️', name:'はじめてのノート',      cond:'ノートを1こかいた',                      check: s=>s.records.filter(r=>r.note&&r.note.trim()).length>=1 },
-  { id:'note10',      cat:'count',  icon:'📓', name:'きろくノートめいじん',  cond:'ノートを10こかいた',                     check: s=>s.records.filter(r=>r.note&&r.note.trim()).length>=10 },
-  { id:'note50',      cat:'count',  icon:'📔', name:'きろくノートはかせ',    cond:'ノートを50こかいた',                     check: s=>s.records.filter(r=>r.note&&r.note.trim()).length>=50 },
-
-  // ── 1回で完了（アクション系） ──
-  { id:'photo',       cat:'action', icon:'📷', name:'カメラたんけんか',      cond:'しゃしんでたからをみつけた',              check: s=>s.records.some(r=>r.odai&&r.odai.fromPhoto) },
-  { id:'parent',      cat:'action', icon:'👨‍👧', name:'いっしょにたんけん',   cond:'おやもさんかしたかいわがあった',          check: s=>s.records.some(r=>r.hadParent) },
-  { id:'xpost',       cat:'action', icon:'𝕏',  name:'たからをとうこう',      cond:'Xにたからをとうこうした',                 check: s=>!!(s.xPosted) },
-  { id:'homescreen',  cat:'action', icon:'📱', name:'ホームについか',        cond:'ホーム画面についかした',                  check: s=>!!(s.addedToHome) },
-  { id:'colorchange', cat:'action', icon:'🎨', name:'いろをかえた',          cond:'アプリのいろをかえた',                    check: s=>!!(s.changedColor) },
-  { id:'typechange',  cat:'action', icon:'🔄', name:'タイプをかえた',        cond:'まなびタイプをかえた',                    check: s=>!!(s.changedType) },
-  { id:'report',      cat:'action', icon:'📊', name:'レポートつくった',      cond:'ウィークリーレポートをつくった',           check: s=>!!(s.weeklyReport&&s.weeklyReport.length>0) },
-  { id:'feedback',    cat:'action', icon:'💌', name:'アンケートおくった',    cond:'アンケートにこたえた',                    check: s=>!!(s.feedbackSent) },
-
-  // ── 特殊 ──
-  { id:'sameodai2lens', cat:'special', icon:'🎯', name:'べつのめでみた',     cond:'おなじおだいをちがうレンズで2かいたんけんした', check: s=>{ const m={}; s.records.forEach(r=>{const k=r.odai&&r.odai.name||""; if(!m[k]) m[k]=new Set(); if(r.lens) m[k].add(r.lens);}); return Object.values(m).some(v=>v.size>=2); } },
-  { id:'sameodai5lens', cat:'special', icon:'🌟', name:'レンズコンプリート', cond:'おなじおだいを5しゅるいのレンズでたんけんした',  check: s=>{ const m={}; s.records.forEach(r=>{const k=r.odai&&r.odai.name||""; if(!m[k]) m[k]=new Set(); if(r.lens) m[k].add(r.lens);}); return Object.values(m).some(v=>v.size>=5); } },
+  { id:'first',      icon:'🔍', name:'はじめてのはっけん', cond:'たからさがしを1かいやった',           check: s=>s.records.length>=1 },
+  { id:'kagaku',     icon:'🔬', name:'かがくたんけんか',   cond:'かがくレンズで1かいたんけんした',     check: s=>s.records.some(r=>r.lens==="かがく") },
+  { id:'streak3',    icon:'📅', name:'3にちれんぞく',      cond:'3にちれんぞくでたからさがしをした',   check: s=>s.streak>=3 },
+  { id:'jibun',      icon:'💛', name:'じぶんたんけんか',   cond:'じぶんレンズで1かいたんけんした',     check: s=>s.records.some(r=>r.lens==="じぶん") },
+  { id:'ten',        icon:'⭐', name:'10こはっけん',       cond:'たからを10こあつめた',               check: s=>s.records.length>=10 },
+  { id:'shakai',     icon:'🗺', name:'しゃかいたんけんか', cond:'しゃかいレンズで1かいたんけんした',   check: s=>s.records.some(r=>r.lens==="しゃかい") },
+  { id:'lensmaster', icon:'🌈', name:'レンズマスター',     cond:'5つのレンズをすべてつかった',         check: s=>new Set(s.records.map(r=>r.lens).filter(Boolean)).size>=5 },
+  { id:'kotoba',     icon:'📖', name:'ことばたんけんか',   cond:'ことばレンズで1かいたんけんした',     check: s=>s.records.some(r=>r.lens==="ことば") },
+  { id:'kazu',       icon:'🔢', name:'かずたんけんか',     cond:'かずレンズで1かいたんけんした',       check: s=>s.records.some(r=>r.lens==="かず") },
+  { id:'streak7',    icon:'🔥', name:'1しゅうかんれんぞく',cond:'7にちれんぞくでたからさがしをした',   check: s=>s.streak>=7 },
+  { id:'twenty',     icon:'💎', name:'20こはっけん',       cond:'たからを20こあつめた',               check: s=>s.records.length>=20 },
+  { id:'photo',      icon:'📷', name:'カメラたんけんか',   cond:'しゃしんでたからをみつけた',          check: s=>s.records.some(r=>r.odai&&r.odai.fromPhoto) },
+  { id:'bookmark5',  icon:'🔖', name:'コレクター',         cond:'おきにいりを5こあつめた',             check: s=>s.records.filter(r=>r.bookmarked).length>=5 },
+  { id:'parent',     icon:'👨‍👧', name:'いっしょにたんけん', cond:'おやもさんかしたかいわがあった',       check: s=>s.records.some(r=>r.hadParent) },
+  { id:'fifty',      icon:'🏆', name:'たから50こ！',       cond:'たからを50こあつめた',               check: s=>s.records.length>=50 },
+  { id:'streak30',   icon:'🌟', name:'1かげつれんぞく',    cond:'30にちれんぞくでたからさがしをした',  check: s=>s.streak>=30 },
+  { id:'custom',     icon:'🏷', name:'タグはかせ',         cond:'じぶんでタグを3つつくった',           check: s=>(s.customTags||[]).length>=3 },
+  { id:'note10',     icon:'📓', name:'きろくノートめいじん',cond:'ノートを10こかいた',                 check: s=>s.records.filter(r=>r.note&&r.note.trim()).length>=10 },
+  { id:'sameodai3',  icon:'🎯', name:'しつこいたんけんか', cond:'おなじおだいを3かいいじょうたんけんした', check: s=>{ const c={}; s.records.forEach(r=>{const k=r.odai&&r.odai.name||""; c[k]=(c[k]||0)+1;}); return Object.values(c).some(n=>n>=3); } },
+  { id:'allcat',     icon:'🗂', name:'カテゴリマスター',   cond:'5つのカテゴリをせいはした',           check: s=>new Set(s.records.map(r=>r.odai&&r.odai.label).filter(Boolean)).size>=5 },
 ];
 
 const ODAI_ALL = [
@@ -270,11 +222,6 @@ function fmtDate(iso){
 function pickRand(){
   return ODAI_ALL[Math.floor(Math.random()*ODAI_ALL.length)];
 }
-// バッヂcheck用（Sを引数として受け取る版）
-function calcTotalDays_(s){
-  const days=new Set((s.records||[]).map(r=>new Date(r.date).toDateString()));
-  return days.size;
-}
 
 // ── State ──
 const S = {
@@ -322,18 +269,12 @@ const S = {
   // ページネーション
   favPage: 0,
   notePage: 0,
+  // テーマ
+  theme: 'amber',
   obColorOpen: false,
   // 新規取得バッヂ通知
   newBadges: [],
   shownBadgeModal: null,
-  // バッヂ用アクションフラグ
-  xPosted: false,
-  addedToHome: false,
-  changedColor: false,
-  changedType: false,
-  feedbackSent: false,
-  // 日常行動声掛け
-  nextActionTip: '',
 };
 
 // ── localStorage 永続化 ──
@@ -353,11 +294,6 @@ function persistSave(){
       customTags:    S.customTags,
       lastLens:      S.lastLens,
       theme:         S.theme,
-      xPosted:       S.xPosted,
-      addedToHome:   S.addedToHome,
-      changedColor:  S.changedColor,
-      changedType:   S.changedType,
-      feedbackSent:  S.feedbackSent,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
   } catch(e){ console.warn('save failed:',e); }
@@ -386,11 +322,6 @@ function persistLoad(){
       customTags:    saved.customTags    ??[],
       lastLens:      saved.lastLens      ??null,
       theme:         saved.theme         ??'amber',
-      xPosted:       saved.xPosted       ??false,
-      addedToHome:   saved.addedToHome   ??false,
-      changedColor:  saved.changedColor   ??false,
-      changedType:   saved.changedType    ??false,
-      feedbackSent:  saved.feedbackSent   ??false,
     });
     // ストリーク途切れチェック
     const _today=new Date().toDateString();
@@ -525,7 +456,7 @@ function chatSystem(){
 - 呼び方: ${u.name||'きみ'}
 - すきなもの: ${u.likes||'なし'}
 - とくいなこと: ${u.strengths||'なし'}
-//　${u.likes?`- 対話の中で自然なタイミングで「${u.likes}と比べてみたらどう？」と絡める`:''}
+${u.likes?`- 対話の中で自然なタイミングで「${u.likes}と比べてみたらどう？」と絡める`:''}
 
 【今回のお題】「${S.odai?.name}」
 【レンズ】${S.lens}`;
@@ -631,30 +562,6 @@ ${conv}
   "findings": ["子どもが実際に言った言葉を活かした発見（1〜${maxFindings}個）"],
   "opinion": "保護者向けの温かいコメント。${maxChars}文字以内。2〜3段落。段落区切りは\\n。押しつけがましくない。${S.user.ageGroup==='young'?'ひらがな多め。':''}"
 }`;
-}
-
-function nextActionSystem(){
-  const u=S.user;
-  const ageRule=u.ageGroup==='young'
-    ?'全文ひらがな・カタカナのみ。1文20文字以内。'
-    :u.ageGroup==='middle'
-    ?'小学校低学年レベルの漢字まで。1文30文字以内。'
-    :'小学校全学年の漢字OK。1文40文字以内。';
-  return `あなたは「たからちゃん」です。
-子ども（${agePrompts.find(a=>a.id===u.ageGroup)?.label||''}）が「${S.odai?.name}」について「${S.lens}レンズ」で探究しました。
-以下の発見がありました：
-${(S.summaryItems||[]).map(f=>`・${f}`).join('\n')}
-
-この体験をきっかけに、子どもが明日の日常で自然に「もっと見てみよう」「また確かめてみよう」と思えるような、
-具体的で短い声掛けを1つだけ作ってください。
-
-【ルール】
-- ${ageRule}
-- 「〜してみてね」「〜のときに見てみよう」「今度〜に行ったら〜してみよう」のような自然な促し
-- 答えを押しつけない。行動を誘うだけ
-- 絵文字は1〜2個
-- JSONのみ（Markdownなし）:
-{"tip": "声掛けの文章（30〜60字）"}`;
 }
 
 function weeklyReportSystem(){
@@ -845,10 +752,10 @@ const App = {
     render();
   },
   obBack(){ if(S.step>0){ S.step--; render(); } },
-  setType(t){ if(S.onboarded&&!S.changedType){ S.changedType=true; } S.user.type=t; render(); },
+  setType(t){ S.user.type=t; render(); },
   setAge(a){ S.user.ageGroup=a; persistSave(); render(); },
   setParent(p){ S.user.parentName=p; render(); },
-  setTheme(id){ S.theme=id; applyTheme(); if(!S.changedColor){ S.changedColor=true; } persistSave(); render(); },
+  setTheme(id){ S.theme=id; applyTheme(); persistSave(); render(); },
   toggleObColor(){ S.obColorOpen=!S.obColorOpen; render(); },
 
   // ── AI お題生成 ──
@@ -1017,7 +924,6 @@ const App = {
     S.opinionOpen=false;
     S.bookmarked=false;
     S.currentNote='';
-    S.nextActionTip='';
     render();
 
     try {
@@ -1038,26 +944,6 @@ const App = {
     persistSave();
     render();
     setTimeout(triggerFindingAnim,50);
-
-    // 次の行動声掛けを非同期生成
-    try {
-      const tipRes=await callAI(
-        [{role:'user',content:'声かけをつくってください。'}],
-        nextActionSystem()
-      );
-      const tipData=JSON.parse(tipRes.replace(/```json|```/g,'').trim());
-      S.nextActionTip=tipData.tip||'';
-      // last recordにも保存
-      const last=S.records[S.records.length-1];
-      if(last) last.nextActionTip=S.nextActionTip;
-      persistSave();
-      // tipカードだけ差し替え
-      const tipEl=document.getElementById('next-action-tip-card');
-      if(tipEl&&S.nextActionTip){
-        tipEl.innerHTML=renderNextActionTipInner(S.nextActionTip);
-        tipEl.className='next-action-tip-card';
-      }
-    } catch(e){ console.warn('nextAction error:',e); }
   },
 
   saveNote(){
@@ -1068,15 +954,6 @@ const App = {
     persistSave();
     const btn=document.querySelector('.note-save-btn');
     if(btn){ btn.textContent='✓ ほぞんしたよ！'; setTimeout(()=>{btn.textContent='💾 ほぞんする';},1500); }
-  },
-
-  _checkAndNotifyBadges(prevEarned){
-    if(!prevEarned) prevEarned=new Set(BADGES.filter(b=>b.check(S)).map(b=>b.id));
-    BADGES.forEach(b=>{
-      if(!prevEarned.has(b.id)&&b.check(S)){
-        if(!S.newBadges.includes(b.id)) S.newBadges.push(b.id);
-      }
-    });
   },
 
   _saveRecord(){
@@ -1091,7 +968,6 @@ const App = {
       findings:[...S.summaryItems],
       bookmarked:false,
       note:'',
-      nextActionTip:'',
       status:'closed',
       hadParent:S.messages.some(m=>m.role==='parent'),
     };
@@ -1103,7 +979,11 @@ const App = {
       S._lastPlayDate=today;
     }
     // 新規取得バッヂを検出
-    App._checkAndNotifyBadges(prevEarned);
+    BADGES.forEach(b=>{
+      if(!prevEarned.has(b.id)&&b.check(S)){
+        S.newBadges.push(b.id);
+      }
+    });
   },
 
 
@@ -1272,10 +1152,10 @@ const App = {
     reader.readAsText(file,'UTF-8');
   },
 
+  // フィードバック（フォームを直接開く）
   sendFeedback(){
-    const FORM_URL='https://x.gd/Jp9px';
+    const FORM_URL='https://forms.gle/XEVhBG2636FCohLw9';
     window.open(FORM_URL,'_blank','noopener,noreferrer');
-    if(!S.feedbackSent){ S.feedbackSent=true; App._checkAndNotifyBadges(); persistSave(); }
   },
 
   async saveSummaryImage(){
@@ -1296,7 +1176,6 @@ const App = {
     const text=`「${name}」のたから：${findings} #たからさがし`;
     const url=`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
     window.open(url,'_blank','noopener,noreferrer');
-    if(!S.xPosted){ S.xPosted=true; App._checkAndNotifyBadges(); persistSave(); }
   },
 
   setBoxFilter(tag){ S.boxFilterTag=S.boxFilterTag===tag?null:tag; render(); },
