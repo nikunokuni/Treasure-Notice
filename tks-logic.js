@@ -456,7 +456,6 @@ function chatSystem(){
 - 呼び方: ${u.name||'きみ'}
 - すきなもの: ${u.likes||'なし'}
 - とくいなこと: ${u.strengths||'なし'}
-${u.likes?`- 対話の中で自然なタイミングで「${u.likes}と比べてみたらどう？」と絡める`:''}
 
 【今回のお題】「${S.odai?.name}」
 【レンズ】${S.lens}`;
