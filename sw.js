@@ -3,7 +3,7 @@
    キャッシュバージョンを上げるとアップデート適用
    ═══════════════════════════════ */
 
-const CACHE_NAME = 'tks-v6';
+const CACHE_NAME = 'tks-v7';
 
 // キャッシュするファイル一覧
 const PRECACHE = [
